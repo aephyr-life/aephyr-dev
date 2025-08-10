@@ -20,7 +20,7 @@ projector_db_url  := flyway_url
 projector_db_user := 'aephyr_projector'
 
 # ──────────────────────────────────────────────────────────────────────────────
-# lists all recipies
+[private]
 default:
     @just --list
 
@@ -64,46 +64,57 @@ dev-env:
     echo "AEPHYR_MAGICLINK_HMAC_SECRET_B64URL=$(gen_key)"           >> $env_file
 
 # builds the program
+[group('dev')]
 build:
   sbt compile
 
 # cleans the build
+[group('dev')]
 clean:
   sbt clean
 
 # runs the tests
+[group('dev')]
 test:
   sbt test
 
 # starts the api server
+[group('dev')]
 api-run:
   sbt api-server/run
 
 # opens a repl
+[group('dev')]
 repl:
   sbt console
 
 # migrates the db
+[group('dev')]
 migrate:
   sbt db-migrations/run
 
 # formats the code
+[group('dev')]
 fmt:
   sbt scalafmtAll
 
 # updates flake.lock
+[group('dev')]
 update-lock:
   nix flake update
 
 # devShell neu laden
+[group('dev')]
 reload:
   direnv reload
 
 # generates a 32-Byte Base64URL-Key without padding
+[group('dev')]
 gen-key:
   openssl rand -base64 32 | tr '+/' '-_' | tr -d '='
 
 # checks dependencies
+[group('dev')]
 dependencies:
   sbt ";undeclaredCompileDependencies;unusedCompileDependencies"
 
@@ -164,23 +175,33 @@ db-bootstrap:
          -f modules/db-migrations/src/main/resources/db/seed/bootstrap.sql
 
 # psql console
+[group('db')]
 psql:
-  psql -h localhost -p 54329 -U postgres -d aephyr
+  psql -h {{db_host}} -p {{db_port}} -U {{db_super}} -d {{db_name}}
 
 # db seed
+[group('db')]
 db-seed:
-  psql -h localhost -p 54329 -U aephyr_migrator -d aephyr -v ON_ERROR_STOP=1 -f modules/db-migrations/src/main/resources/db/seed/dev_users.sql
+  psql -h {{db_host}} -p {{db_port}} -U {{flyway_user}} -d {{db_name}} \
+       -v ON_ERROR_STOP=1 \
+       -f modules/db-migrations/src/main/resources/db/seed/dev_users.sql
 
-pr:
+# creates a new branch
+[group('dev')]
+branch:
     @echo "Select branch type:"
     @PS3="> "; select prefix in feature fix chore test refactor docs; do \
         if [[ -n "$prefix" ]]; then \
             read -r -p "Enter branch name (kebab-case): " name; \
             git switch -c "$prefix/$name"; \
-            git push -u origin "$prefix/$name"; \
-            gh pr create --fill --base main --head "$prefix/$name" --draft; \
+            git push -f -u origin "$prefix/$name"; \
             break; \
         else \
             echo "Invalid choice"; \
         fi \
     done
+
+# creates a draft pull request
+[group('dev')]
+draft-pr:
+    @gh pr create --fill --base main --draft
