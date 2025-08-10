@@ -1,0 +1,11 @@
+-- add a trigger to forbid UPDATE/DELETE
+--CREATE OR REPLACE FUNCTION forbid_event_mods()
+--RETURNS trigger AS $$
+--BEGIN
+--  RAISE EXCEPTION 'Events are immutable';
+--END;
+--$$ LANGUAGE plpgsql;
+--
+--CREATE TRIGGER no_update_delete_events
+--BEFORE UPDATE OR DELETE ON events.domain_events
+--FOR EACH ROW EXECUTE FUNCTION forbid_event_mods();
