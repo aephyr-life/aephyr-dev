@@ -6,6 +6,7 @@ import aephyr.identity.application.MagicLinkConfig
 import aephyr.identity.application.ports.TokenStore
 import aephyr.identity.application.{MagicLinkService, MagicLinkServiceLive}
 import aephyr.adapters.security.SecureRandomLive
+import aephyr.config.{AppConfig, MagicLinkCfg}
 import zio.*
 import zio.Clock
 import zio.http.*
@@ -30,7 +31,8 @@ object ApiServerMain extends ZIOAppDefault:
             EmailSenderLive.layer,
             UserReadRepository.layer,
             UserWriteRepository.layer,
-            MagicLinkConfig.layer,
+            AppConfig.layer,
+            MagicLinkCfg.layer,
             SecureRandomLive.layer,
             ZLayer.succeed(Clock.ClockLive),
             DataSourceLayer.live

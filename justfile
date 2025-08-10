@@ -49,8 +49,6 @@ dev-env:
     echo ""                                                         >> $env_file
 
     echo "# App database"                                           >> $env_file
-    echo "AEPHYR_APP_DB_URL={{app_db_url}}"                         >> $env_file
-    echo "AEPHYR_APP_DB_USER={{app_db_user}}"                       >> $env_file
     echo "AEPHYR_APP_DB_PASSWORD=$(gen_key)"                        >> $env_file
     echo ""                                                         >> $env_file
 
