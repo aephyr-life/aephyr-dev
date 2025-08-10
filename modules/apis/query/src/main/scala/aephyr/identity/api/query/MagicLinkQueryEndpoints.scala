@@ -1,18 +1,30 @@
 package aephyr.identity.api.query
 
 import aephyr.api.ErrorDto
-
+import sttp.model.StatusCode
 import sttp.tapir.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.jsoniter.*
-import sttp.model.StatusCode
 
 object MagicLinkQueryEndpoints:
   val consumeMagicLink: Endpoint[Unit, String, ErrorDto, MagicLinkConsumptionResponse, Any] =
     endpoint.get
-      .in("api" / "auth" / "callback")
-      .in(query[String]("token")) // TODO replace String with opaque type
-      .errorOut(jsonBody[ErrorDto])
-      .out(jsonBody[MagicLinkConsumptionResponse])
+      .in("api" / "auth" / "link" / path[String]("token")) // TODO replace String with opaque type
+      .out(jsonBody[MagicLinkConsumptionResponse]
+        .description("Accepted")
+        .example(MagicLinkConsumptionResponse(
+          "If an account exists for this email, a sign-in link has been sent."
+        )
+      ))
+      .errorOut(oneOf[ErrorDto](
+        oneOfVariant(StatusCode.BadRequest, jsonBody[ErrorDto]
+          .description("Invalid payload")
+        ),
+        oneOfVariant(StatusCode.TooManyRequests, jsonBody[ErrorDto]
+          .description("Rate limited")),
+        oneOfVariant(StatusCode.InternalServerError, jsonBody[ErrorDto]
+          .description("Unexpected error")),
+      ))
+      .out(statusCode(StatusCode.Accepted))
       .description("Login via a magic link")
-      .name("consumeMagicLink")
+      .name("confirm login")

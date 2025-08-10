@@ -1,20 +1,30 @@
 package aephyr.adapters.db
 
+import aephyr.config.DbCfg
 import com.zaxxer.hikari.HikariDataSource
 import zio.{ZIO, ZLayer}
 
 import javax.sql.DataSource
 
 object DataSourceLayer {
-  val live: ZLayer[Any, Throwable, DataSource] =
-    ZLayer.fromZIO {
-      ZIO.attempt {
-        val ds = new HikariDataSource()
-        ds.setJdbcUrl(sys.env("DB_URL"))
-        ds.setUsername(sys.env("DB_USER"))
-        ds.setPassword(sys.env("DB_PASSWORD"))
-        ds.setMaximumPoolSize(10)
-        ds
-      }
-    }.tapError(e => ZIO.logError(s"❌ Failed to init DataSource: ${e.getMessage}"))
+
+  val live: ZLayer[DbCfg, Throwable, HikariDataSource] = ZLayer.scoped {
+    for {
+      cfg <- ZIO.service[DbCfg]
+      ds <- ZIO.acquireRelease {
+        ZIO.attempt {
+          val ds = new HikariDataSource()
+          ds.setJdbcUrl(cfg.url)
+          ds.setUsername(cfg.user)
+          ds.setPassword(cfg.password)
+          ds.setMaximumPoolSize(cfg.pool.maxSize)
+          ds.setMinimumIdle(math.min(1, cfg.pool.maxSize))
+          ds
+        }.tapError(e =>
+          ZIO.logError(s"❌ Failed to init DataSource: ${e.getMessage}")
+        )
+      }(ds => ZIO.attempt(ds.close()).orDie)
+    } yield ds
+  }
 }
+

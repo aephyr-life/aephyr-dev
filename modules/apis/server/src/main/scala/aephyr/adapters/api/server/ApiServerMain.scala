@@ -6,6 +6,7 @@ import aephyr.identity.application.MagicLinkConfig
 import aephyr.identity.application.ports.TokenStore
 import aephyr.identity.application.{MagicLinkService, MagicLinkServiceLive}
 import aephyr.adapters.security.SecureRandomLive
+import aephyr.config.{AppConfig, MagicLinkCfg}
 import zio.*
 import zio.Clock
 import zio.http.*
@@ -24,13 +25,15 @@ object ApiServerMain extends ZIOAppDefault:
         _ <- Server
           .serve(ApiRoutes.all)
           .provide(
-            Server.defaultWithPort(8080),
+            Server.defaultWithPort(8080), // TODO get Port from config
             MagicLinkServiceLive.layer,
             TokenStoreLive.layer,
             EmailSenderLive.layer,
             UserReadRepository.layer,
             UserWriteRepository.layer,
-            MagicLinkConfig.layer,
+            AppConfig.layer,
+            AppConfig.db,
+            AppConfig.magicLink,
             SecureRandomLive.layer,
             ZLayer.succeed(Clock.ClockLive),
             DataSourceLayer.live
