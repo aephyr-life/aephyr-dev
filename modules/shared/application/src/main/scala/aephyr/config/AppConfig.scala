@@ -1,13 +1,16 @@
 package aephyr.config
 
 import zio.*
+import zio.config.ConfigOps
 import zio.config.magnolia.*
 import zio.config.typesafe.*
+
+import aephyr.kernel.StringOps.*
 
 final case class HttpCfg(host: String, port: Int)
 
 final case class DbPoolCfg(maxSize: Int, queueSize: Int)
-final case class DbCfg(url: String, user: String, password: Option[String], pool: DbPoolCfg)
+final case class DbCfg(url: String, user: String, password: String, pool: DbPoolCfg)
 
 final case class SmtpCfg(host: String, port: Int, startTls: Boolean)
 final case class DeliveryCfg(from: String, smtp: SmtpCfg)
@@ -18,17 +21,17 @@ final case class MagicLinkCfg(
                                hmacSecretB64Url: String,
                                delivery: DeliveryCfg
                              )
-object MagicLinkCfg:
-  val layer: ZLayer[AppConfig, Throwable, MagicLinkCfg] =
-    ZLayer.fromZIO {
-      for
-        app <- ZIO.service[AppConfig]
-        ml   = app.auth.magicLink
-//        sec <- ml.hmacSecretB64Url match
-//          case Some(s) => ZIO.attempt(java.util.Base64.getUrlDecoder.decode(s))
-//          case None    => ZIO.fail(new RuntimeException("HMAC secret missing"))
-      yield ml
-    }
+//object MagicLinkCfg:
+//  val layer: ZLayer[AppConfig, Throwable, MagicLinkCfg] =
+//    ZLayer.fromZIO {
+//      for
+//        app <- ZIO.service[AppConfig]
+//        ml   = app.auth.magicLink
+////        sec <- ml.hmacSecretB64Url match
+////          case Some(s) => ZIO.attempt(java.util.Base64.getUrlDecoder.decode(s))
+////          case None    => ZIO.fail(new RuntimeException("HMAC secret missing"))
+//      yield ml
+//    }
 
 final case class AuthCfg(magicLink: MagicLinkCfg)
 
@@ -42,9 +45,19 @@ final case class AppConfig(
                           )
 
 object AppConfig:
-  private val desc = deriveConfig[AppConfig].nested("app")
 
-  val layer: ZLayer[Any, Throwable, AppConfig] =
+  private val desc = deriveConfig[AppConfig]
+    .nested("app")
+    .mapKey(_.camelToKebab)
+
+  val layer: ZLayer[Any, Throwable, AppConfig] = ZLayer.fromZIO {
+    TypesafeConfigProvider
+      .fromResourcePath()
+      .load(desc)
+      .mapError(new RuntimeException(_))
+  }
+
+  val layerWithEnvVars: ZLayer[Any, Throwable, AppConfig] = {
     ZLayer.fromZIO {
       val fileProvider = TypesafeConfigProvider.fromResourcePath()
       val envProvider  = ConfigProvider.fromEnv("_", ",")
@@ -53,9 +66,20 @@ object AppConfig:
         .load(desc)
         .mapError(e => new RuntimeException(e.toString))
     }
+  }
 
-  // optional convenience sub-layers
-//  val http:    ZLayer[AppConfig, Nothing, HttpCfg]    = ZLayer.fromFunction((c: AppConfig) => c.http)
-//  val db:      ZLayer[AppConfig, Nothing, DbCfg]      = ZLayer.fromFunction((c: AppConfig) => c.db)
-//  val auth:    ZLayer[AppConfig, Nothing, AuthCfg]    = ZLayer.fromFunction((c: AppConfig) => c.auth)
-//  val logging: ZLayer[AppConfig, Nothing, LoggingCfg] = ZLayer.fromFunction((c: AppConfig) => c.logging)
+// optional convenience sub-layers
+  val http: ZLayer[AppConfig, Nothing, HttpCfg] =
+    ZLayer.fromFunction((c: AppConfig) => c.http)
+
+  val db: ZLayer[AppConfig, Nothing, DbCfg]      =
+    ZLayer.fromFunction((c: AppConfig) => c.db)
+
+  val auth: ZLayer[AppConfig, Nothing, AuthCfg]    =
+    ZLayer.fromFunction((c: AppConfig) => c.auth)
+
+  val logging: ZLayer[AppConfig, Nothing, LoggingCfg] =
+    ZLayer.fromFunction((c: AppConfig) => c.logging)
+
+  val magicLink: ZLayer[AppConfig, Nothing, MagicLinkCfg] =
+    ZLayer.fromFunction((c: AppConfig) => c.auth.magicLink)

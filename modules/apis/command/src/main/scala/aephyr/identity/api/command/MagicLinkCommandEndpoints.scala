@@ -2,6 +2,7 @@ package aephyr.identity.api.command
 
 import aephyr.identity.domain.User
 import aephyr.identity.domain.User.EmailAddress
+import sttp.model.StatusCode
 import sttp.tapir.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.jsoniter.*
@@ -15,8 +16,8 @@ object MagicLinkCommandEndpoints:
 
   val requestMagicLink: Endpoint[Unit, MagicLinkCreationRequest, Unit, MagicLinkCreationResponse, Any] =
     endpoint.post
-      .in("api" / "auth" / "magic-link")
+      .in("api" / "auth" / "link")
       .in(jsonBody[MagicLinkCreationRequest].example(MagicLinkCreationRequest(User.EmailAddress("user@example.com"))))
       .out(jsonBody[MagicLinkCreationResponse])
       .description("Request a passwordless magic link to be sent via email")
-      .name("requestMagicLink")
+      .name("request login link")

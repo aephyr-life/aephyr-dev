@@ -20,6 +20,14 @@ lazy val root = (project in file("."))
   .settings(publish / skip := true)
 
 lazy val sharedKernel = mod("shared/kernel", "shared-kernel")
+  .settings(
+    libraryDependencies ++= testLibs(
+      Libs.zio,
+      Libs.zioTest,
+      Libs.zioTestSbt
+    ),
+    testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
+  )
 
 lazy val sharedApplication = mod("shared/application", "shared-application")
   .dependsOn(sharedKernel)
