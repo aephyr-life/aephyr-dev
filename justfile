@@ -98,3 +98,17 @@ psql:
 # db seed
 db-seed:
   psql -h localhost -p 54329 -U aephyr_migrator -d aephyr -v ON_ERROR_STOP=1 -f modules/db-migrations/src/main/resources/db/seed/dev_users.sql
+
+pr:
+    @echo "Select branch type:"
+    @PS3="> "; select prefix in feature fix chore test refactor docs; do \
+        if [[ -n "$prefix" ]]; then \
+            read -r -p "Enter branch name (kebab-case): " name; \
+            git switch -c "$prefix/$name"; \
+            git push -u origin "$prefix/$name"; \
+            gh pr create --fill --base main --head "$prefix/$name" --draft; \
+            break; \
+        else \
+            echo "Invalid choice"; \
+        fi \
+    done
