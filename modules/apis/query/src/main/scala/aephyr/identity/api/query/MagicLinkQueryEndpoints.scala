@@ -7,13 +7,13 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.json.jsoniter.*
 
 object MagicLinkQueryEndpoints:
-  val consumeMagicLink: Endpoint[Unit, String, ErrorDto, MagicLinkConsumptionResponse, Any] =
+  val consumeMagicLink: PublicEndpoint[String, ErrorDto, MagicLinkConsumptionResponse, Any] =
     endpoint.get
       .in("api" / "auth" / "link" / path[String]("token")) // TODO replace String with opaque type
       .out(jsonBody[MagicLinkConsumptionResponse]
         .description("Accepted")
         .example(MagicLinkConsumptionResponse(
-          "If an account exists for this email, a sign-in link has been sent."
+          "access granted."
         )
       ))
       .errorOut(oneOf[ErrorDto](
@@ -28,3 +28,4 @@ object MagicLinkQueryEndpoints:
       .out(statusCode(StatusCode.Accepted))
       .description("Login via a magic link")
       .name("confirm login")
+      .tag("auth-magiclink")

@@ -4,8 +4,11 @@ import zio.*
 import zio.config.ConfigOps
 import zio.config.magnolia.*
 import zio.config.typesafe.*
-
 import aephyr.kernel.StringOps.*
+
+import java.util.Base64
+import javax.crypto.spec.SecretKeySpec
+import scala.util.Try
 
 final case class HttpCfg(host: String, port: Int)
 
@@ -16,12 +19,24 @@ final case class SmtpCfg(host: String, port: Int, startTls: Boolean)
 final case class DeliveryCfg(from: String, smtp: SmtpCfg)
 
 final case class MagicLinkCfg(
+                               ttl: Duration,
                                ttlMinutes: Int,
                                baseUrl: String,
-                               hmacSecretB64Url: String,
+                               hmacSecretB64Url: SecretKeySpec,
                                delivery: DeliveryCfg
                              )
-//object MagicLinkCfg:
+object MagicLinkCfg:
+  
+  given Config[SecretKeySpec] = {
+      
+    Config.string.mapOrFail { s =>
+      Try { new SecretKeySpec(Base64.getUrlDecoder.decode(s), "HmacSHA256") }
+        .toEither
+        .left.map(t => Config.Error.InvalidData(Chunk.empty, t.getMessage))
+    }
+  }
+
+
 //  val layer: ZLayer[AppConfig, Throwable, MagicLinkCfg] =
 //    ZLayer.fromZIO {
 //      for
@@ -46,6 +61,8 @@ final case class AppConfig(
 
 object AppConfig:
 
+  import aephyr.config.MagicLinkCfg.given 
+  
   private val desc = deriveConfig[AppConfig]
     .nested("app")
     .mapKey(_.camelToKebab)
