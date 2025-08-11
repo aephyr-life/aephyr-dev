@@ -24,8 +24,8 @@ final case class TokenStoreLive(ds: DataSource) extends TokenStore:
 
     val sql =
       """insert into tech.magic_links
-        | (hash, user_id, purpose, created_at, expires_at, used_at, used_by_ip, user_agent)
-        | values (?, ?, ?, now(), ?, null, ?::inet, ?)
+        | (hash, user_id, purpose, expires_at, created_at, used_at)
+        | values (?, ?, ?, ?, now(), null)
         | on conflict (hash) do update
         |   set user_id = excluded.user_id,
         |       purpose  = excluded.purpose,
@@ -53,7 +53,7 @@ final case class TokenStoreLive(ds: DataSource) extends TokenStore:
         | where ml.hash = ?
         |   and ml.used_at is null
         |   and ml.expires_at > ?
-        | returning ml.user_id, ml.purpose, ml.created_at, ml.expires_at
+        | returning ml.hash, ml.user_id, ml.purpose, ml.expires_at
         |""".stripMargin
 
     JdbcMini.withConnection(ds) {

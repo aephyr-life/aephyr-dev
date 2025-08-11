@@ -36,8 +36,14 @@ object ApiServerMain extends ZIOAppDefault:
             AppConfig.magicLink,
             SecureRandomLive.layer,
             ZLayer.succeed(Clock.ClockLive),
-            DataSourceLayer.live
+            DataSourceLayer.live,
+            ZLayer.fromZIO {
+              for {
+                cfg <- ZIO.service[MagicLinkCfg]
+                lb = new LinkBuilder(cfg.baseUrl)
+              } yield (token: String) => lb.magicLink(token)
+            }
           )
           .onInterrupt(ZIO.logInfo("📥 Interrupt received, stopping..."))
       } yield ()
-    } @@ loggerName("zio.http.Server")
+    }
