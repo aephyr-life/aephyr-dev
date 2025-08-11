@@ -67,7 +67,6 @@ object EventStoreError:
     with EventStoreError:
     cause.foreach(initCause)
 
-// -------- Effect-agnostic port (Option B) --------
 trait EventStore[F[_]]:
   def append(
     streamId: StreamId,
