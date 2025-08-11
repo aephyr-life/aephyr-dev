@@ -1,13 +1,13 @@
 package aephyr.identity.domain.auth
 
-sealed trait TokenError extends Throwable
+sealed trait TokenStoreError extends Throwable
 
-object TokenError:
+object TokenStoreError:
 
-  case object InvalidOrExpired extends TokenError:
+  case object InvalidOrExpired extends TokenStoreError:
     override def getMessage: String = "token invalid or expired."
 
-  final case class DbError(cause: Throwable) extends TokenError:
+  final case class DbError(cause: Throwable) extends TokenStoreError:
     override def getMessage: String = s"db error: \"${cause.getMessage}\""
     override def getCause: Throwable = cause
 

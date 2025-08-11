@@ -4,12 +4,9 @@ import aephyr.identity.domain.User
 
 import java.time.Instant
 
-final case class MagicTokenRecord(
+final case class TokenRecord(
                                    hash: String,
                                    userId: User.Id,
                                    purpose: String,                // z.B. "login" | "verifyEmail" | …
-                                   expiresAt: Instant,
-                                   usedAt: Option[Instant],
-                                   createdIp: Option[String] = None,
-                                   ua: Option[String] = None
+                                   expiresAt: Instant
                                  )

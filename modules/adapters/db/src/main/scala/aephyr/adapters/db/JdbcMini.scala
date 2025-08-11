@@ -6,23 +6,17 @@ import zio.*
 
 import java.sql.{Connection, PreparedStatement, ResultSet, SQLException, Timestamp}
 import java.time.Instant
+import java.time.temporal.ChronoField
 import java.util.UUID
 import javax.sql.DataSource
 
 object JdbcMini {
-
-//  given ex: SQLException =
-//    def toPersistenceError: PersistenceError =
-//      ex.getSQLState match {
-//        case "23505" => UniqueViolation(ex.getMessage) // TODO the cause get swallowed
-//        case "23503" => ForeignKeyViolation(ex.getMessage)
-//        case "40001" => SerializationFailure(ex.getMessage)
-//        case "40P01" => DeadlockDetected(ex.getMessage)
-//        case "23514" => CheckViolation(ex.getMessage)
-//        case "57014" => Timeout(ex.getMessage) // statement_timeout
-//        case _ => Unknown(ex.getMessage, ex)
-//      }
-
+  
+  extension (i: Instant)
+    def asTimestamp: Timestamp =
+      new Timestamp(i.toEpochMilli)  
+      
+  
   private def toPersistenceError(t: Throwable): PersistenceError = t match
     case e: SQLException => DbError.from(e)
     case other => PersistenceError.Unknown(other.getMessage, other)

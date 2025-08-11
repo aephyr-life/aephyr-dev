@@ -2,7 +2,7 @@ package aephyr.identity.application
 
 import aephyr.config.MagicLinkCfg
 import aephyr.identity.domain.User
-import aephyr.identity.domain.auth.{AuthError, TokenError}
+import aephyr.identity.domain.auth.{AuthError, TokenStoreError}
 import aephyr.identity.application.ports.*
 import aephyr.shared.security.SecureRandom
 import zio.{Trace, UIO, ZIO, ZLayer}
@@ -62,7 +62,7 @@ final case class MagicLinkServiceLive(
         hash,
         uid,
         "login",
-        now.plusSeconds(cfg.ttl.getSeconds), // TODO use duration here
+        now.plusSeconds(cfg.ttl.getSeconds),
         singleUse = true
       ) // TODO don't hardcode strings
       link = s"${cfg.baseUrl}/auth/callback?token=$token" // TODO get URL from endpoints
@@ -79,7 +79,7 @@ final case class MagicLinkServiceLive(
         .mapError(AuthError.Internal.apply)
       rec <- tokens.consumeSingleUse(hash, now)
         .mapError {
-          case TokenError.InvalidOrExpired => AuthError.InvalidToken
+          case TokenStoreError.InvalidOrExpired => AuthError.InvalidToken
           case e => AuthError.Internal(e)
         }
       user <- usersRead

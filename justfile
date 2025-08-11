@@ -78,7 +78,7 @@ test:
 
 # starts the api server
 [group('dev')]
-api-run:
+run:
   sbt api-server/run
 
 # opens a repl
@@ -174,8 +174,8 @@ db-bootstrap:
 
 # psql console
 [group('db')]
-psql:
-  psql -h {{db_host}} -p {{db_port}} -U {{db_super}} -d {{db_name}}
+psql user:
+  psql -h {{db_host}} -p {{db_port}} -U {{user}} -d {{db_name}}
 
 # db seed
 [group('db')]

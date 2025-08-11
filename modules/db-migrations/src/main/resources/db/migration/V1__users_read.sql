@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS read.users_read (
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN NEW.updated_at := now(); RETURN NEW; END $$;
 
-DROP TRIGGER IF EXISTS trg_users_read_updated_at ON users_read;
+DROP TRIGGER IF EXISTS trg_users_read_updated_at ON read.users_read;
 CREATE TRIGGER trg_users_read_updated_at
-BEFORE UPDATE ON users_read
+BEFORE UPDATE ON read.users_read
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
