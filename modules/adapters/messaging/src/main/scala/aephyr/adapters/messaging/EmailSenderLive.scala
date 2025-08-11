@@ -6,8 +6,9 @@ import zio.{UIO, ZIO, ZLayer}
 
 final case class EmailSenderLive(/* smtp cfg */) extends EmailSender:
 
-  def send(to: User.EmailAddress, subject: String, html: String, text: String): UIO[Unit] =
-    ZIO.logInfo(s"Simulated email to $to: $subject")
+  def send(to: User.EmailAddress, subject: String, html: String, text: String): UIO[Unit] = {
+    ZIO.logInfo(s"Simulated email to $to\n$subject\n\n$text")
+  }
 
 object EmailSenderLive:
 

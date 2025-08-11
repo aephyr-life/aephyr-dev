@@ -28,25 +28,12 @@ final case class MagicLinkCfg(
 object MagicLinkCfg:
   
   given Config[SecretKeySpec] = {
-      
     Config.string.mapOrFail { s =>
       Try { new SecretKeySpec(Base64.getUrlDecoder.decode(s), "HmacSHA256") }
         .toEither
         .left.map(t => Config.Error.InvalidData(Chunk.empty, t.getMessage))
     }
   }
-
-
-//  val layer: ZLayer[AppConfig, Throwable, MagicLinkCfg] =
-//    ZLayer.fromZIO {
-//      for
-//        app <- ZIO.service[AppConfig]
-//        ml   = app.auth.magicLink
-////        sec <- ml.hmacSecretB64Url match
-////          case Some(s) => ZIO.attempt(java.util.Base64.getUrlDecoder.decode(s))
-////          case None    => ZIO.fail(new RuntimeException("HMAC secret missing"))
-//      yield ml
-//    }
 
 final case class AuthCfg(magicLink: MagicLinkCfg)
 

@@ -34,10 +34,30 @@ GRANT SELECT ON ALL TABLES IN SCHEMA pii TO aephyr_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA pii
   GRANT SELECT ON TABLES TO aephyr_app;
 
+-- App can access the schema itself
+GRANT USAGE ON SCHEMA read TO aephyr_app;
+
+-- App can read existing tables
+GRANT SELECT ON ALL TABLES IN SCHEMA read TO aephyr_app;
+
+-- Future tables created by the migrator are readable by the app
+ALTER DEFAULT PRIVILEGES FOR USER aephyr_migrator IN SCHEMA read
+  GRANT SELECT ON TABLES TO aephyr_app;
+
+-- (If any sequences exist in read)
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA read TO aephyr_app;
+ALTER DEFAULT PRIVILEGES FOR USER aephyr_migrator IN SCHEMA read
+  GRANT USAGE, SELECT ON SEQUENCES TO aephyr_app;
+
 -- Example: allow app to write only what you need
 --GRANT INSERT(id, email_norm, created_at), UPDATE(email_norm), DELETE
 --  ON pii.user_email
 --  TO aephyr_app;
+
+GRANT USAGE ON SCHEMA read TO aephyr_projector;
+GRANT INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA read TO aephyr_projector;
+ALTER DEFAULT PRIVILEGES FOR USER aephyr_migrator IN SCHEMA read
+  GRANT INSERT, UPDATE, DELETE ON TABLES TO aephyr_projector;
 
 -- projector: read-only on pii
 GRANT USAGE ON SCHEMA pii TO aephyr_projector;

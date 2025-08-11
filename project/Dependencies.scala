@@ -23,6 +23,7 @@ object Dependencies {
     val sttpOpenapiModel = "0.11.10"
     val hikari           = "7.0.1"
     val embeddedPostgres = "2.0.4"
+    val sttpClient       = "3.9.6"
   }
 
   def prod(module: ModuleID, modules: ModuleID*): Seq[ModuleID] =
@@ -77,5 +78,9 @@ object Dependencies {
     val zioLoggingSlf4j2  = "dev.zio" %% "zio-logging-slf4j2" % V.zioLogging
     val zioStreams        = "dev.zio" %% "zio-streams" % V.zio
     val zioStacktracer    = "dev.zio" %% "zio-stacktracer" % V.zio
+
+    val tapirSttpClient   = "com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % V.tapir
+    val sttpClientCore    = "com.softwaremill.sttp.client3" %% "core" % V.sttpClient
+
   }
 }

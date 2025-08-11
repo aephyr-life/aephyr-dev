@@ -49,6 +49,7 @@ lazy val identityApplication = mod("bc/identity/application", "identity-applicat
   .settings(
     libraryDependencies ++= Seq(
       Libs.zio,
+      Libs.zioLogging,
       Libs.zioStacktracer
     )
   )
@@ -148,6 +149,8 @@ lazy val apiServer = mod("apis/server", "api-server")
       Libs.tapirZio,
       Libs.tapirOpenApiDocs,
       Libs.tapirZioHttp,
+      Libs.tapirSttpClient,
+      Libs.sttpClientCore,
       Libs.zio,
       Libs.zioStacktracer,
       Libs.zioHttp,
