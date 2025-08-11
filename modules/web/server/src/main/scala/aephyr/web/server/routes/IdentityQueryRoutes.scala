@@ -1,4 +1,11 @@
-package aephyr.adapters.api.server
+//------------------------------------------------------------------------------
+//  SPDX-License-Identifier: Aephyr-SAL-1.0
+//
+//  Licensed under the Aephyr Source Available License
+//  See LICENSE file in the project root for license text.
+//------------------------------------------------------------------------------
+
+package aephyr.web.server.routes
 
 import aephyr.api.ErrorMappings
 import aephyr.identity.api.query.{

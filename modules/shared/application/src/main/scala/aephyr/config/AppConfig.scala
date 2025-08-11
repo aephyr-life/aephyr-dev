@@ -16,24 +16,6 @@ final case class DbPoolCfg(maxSize: Int, queueSize: Int)
 final case class DbCfg(url: String, user: String, password: String, pool: DbPoolCfg)
 
 final case class SmtpCfg(host: String, port: Int, startTls: Boolean)
-final case class DeliveryCfg(from: String, smtp: SmtpCfg)
-
-final case class MagicLinkCfg(
-                               ttl: Duration,
-                               ttlMinutes: Int,
-                               baseUrl: String,
-                               hmacSecretB64Url: SecretKeySpec,
-                               delivery: DeliveryCfg
-                             )
-object MagicLinkCfg:
-  
-  given Config[SecretKeySpec] = {
-    Config.string.mapOrFail { s =>
-      Try { new SecretKeySpec(Base64.getUrlDecoder.decode(s), "HmacSHA256") }
-        .toEither
-        .left.map(t => Config.Error.InvalidData(Chunk.empty, t.getMessage))
-    }
-  }
 
 final case class AuthCfg(magicLink: MagicLinkCfg)
 
@@ -87,3 +69,6 @@ object AppConfig:
 
   val magicLink: ZLayer[AppConfig, Nothing, MagicLinkCfg] =
     ZLayer.fromFunction((c: AppConfig) => c.auth.magicLink)
+
+  val magicLinkIssuance: ZLayer[AppConfig, Nothing, MagicLinkIssuance] =
+    ZLayer.fromFunction((c: AppConfig) => c.auth.magicLink.issuance)
