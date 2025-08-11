@@ -1,17 +1,19 @@
 package aephyr.adapters.api.server
 
-import aephyr.adapters.db.{DataSourceLayer, TokenStoreLive, UserReadRepository, UserWriteRepository}
+import aephyr.adapters.db.{
+  DataSourceLayer,
+  TokenStoreLive,
+  UserReadRepository,
+  UserWriteRepository
+}
 import aephyr.adapters.messaging.EmailSenderLive
-import aephyr.identity.application.MagicLinkConfig
-import aephyr.identity.application.ports.TokenStore
-import aephyr.identity.application.{MagicLinkService, MagicLinkServiceLive}
 import aephyr.adapters.security.SecureRandomLive
-import aephyr.config.{AppConfig, MagicLinkCfg}
-import zio.*
-import zio.Clock
-import zio.http.*
+import aephyr.config.{ AppConfig, MagicLinkCfg }
+import aephyr.identity.application.ports.TokenStore
+import aephyr.identity.application.{ MagicLinkService, MagicLinkServiceLive }
+import zio.http._
 import zio.logging.backend.SLF4J
-import zio.logging.loggerName
+import zio.{ Clock, _ }
 
 object ApiServerMain extends ZIOAppDefault:
 

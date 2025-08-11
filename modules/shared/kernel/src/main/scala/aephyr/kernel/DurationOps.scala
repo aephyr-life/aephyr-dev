@@ -8,12 +8,7 @@
 package aephyr.kernel
 
 import java.time.Duration
-import java.time.temporal.{ChronoUnit, TemporalUnit}
 
 object DurationOps:
 
-  extension (s: Duration)
-
-    def minutes: Long =
-      s.getSeconds / 60
-
+  extension (s: Duration) def minutes: Long = s.getSeconds / 60

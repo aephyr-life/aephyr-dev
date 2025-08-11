@@ -6,8 +6,8 @@ import aephyr.identity.application.MagicLinkService
 import sttp.tapir.redoc.RedocUIOptions
 import sttp.tapir.redoc.bundle.RedocInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import zio.*
-import zio.http.*
+import zio._
+import zio.http._
 
 object ApiRoutes:
 
@@ -37,14 +37,15 @@ object ApiRoutes:
 
   private val healthRoute =
     Routes(
-      Method.HEAD / "api" / "health" -> handler { (_: Request) =>
-        Response.text("OK.\n")
+      Method.HEAD / "api" / "health" -> handler {
+        (_: Request) =>
+          Response.text("OK.\n")
       },
-      Method.GET / "api" / "health" -> handler { (_: Request) =>
-        Response.text("OK.\n")
+      Method.GET / "api" / "health" -> handler {
+        (_: Request) =>
+          Response.text("OK.\n")
       }
     )
-
 
   val all: Routes[MagicLinkService, Response] =
     healthRoute ++ redocRoute ++ commandRoutes ++ queryRoutes

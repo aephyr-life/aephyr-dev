@@ -1,14 +1,14 @@
 package aephyr.identity.application
 
-import zio.*
-import java.util.Base64
 import javax.crypto.spec.SecretKeySpec
 
+import zio._
+
 final case class MagicLinkConfig(
-                                  baseUrl: String,
-                                  ttl: Duration = 15.minutes,
-                                  hmacKey: SecretKeySpec
-                                )
+  baseUrl: String,
+  ttl: Duration = 15.minutes,
+  hmacKey: SecretKeySpec
+)
 
 //object MagicLinkConfig:
 //

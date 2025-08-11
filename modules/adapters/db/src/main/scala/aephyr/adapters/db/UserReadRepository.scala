@@ -1,21 +1,21 @@
 package aephyr.adapters.db
 
-import aephyr.identity.application.ports.UserReadPort
-import aephyr.identity.domain.User
-import aephyr.identity.domain.User.EmailAddress
-import aephyr.kernel.PersistenceError
-import zio.{IO, ZLayer}
-
 import java.sql.ResultSet
 import java.util.UUID
 import javax.sql.DataSource
 
+import aephyr.identity.application.ports.UserReadPort
+import aephyr.identity.domain.User
+import aephyr.identity.domain.User.EmailAddress
+import aephyr.kernel.PersistenceError
+import zio.{ IO, ZLayer }
+
 final case class UserReadRepository(ds: DataSource) extends UserReadPort:
 
   object U {
-    val id = "id"
+    val id         = "id"
     val email_norm = "email_norm"
-    val status = "status"
+    val status     = "status"
     val created_at = "created_at"
     val updated_at = "updated_at"
   }
@@ -28,10 +28,12 @@ final case class UserReadRepository(ds: DataSource) extends UserReadPort:
         s"FROM read.users_read WHERE $id = ?"
 
     JdbcMini.withConnection(ds) {
-      JdbcMini.queryOne(sql, Seq(userId.value))(userFromRs)
+      JdbcMini.queryOne(sql, Seq(Some(userId.value)))(userFromRs)
     }
 
-  override def findByEmail(email: EmailAddress): IO[PersistenceError, Option[User]] =
+  override def findByEmail(
+    email: EmailAddress
+  ): IO[PersistenceError, Option[User]] =
     import U.*
 
     val sql =
@@ -39,7 +41,7 @@ final case class UserReadRepository(ds: DataSource) extends UserReadPort:
         s"FROM read.users_read WHERE $email_norm = ?"
 
     JdbcMini.withConnection(ds) {
-      JdbcMini.queryOne(sql, Seq(email.normalized))(userFromRs)
+      JdbcMini.queryOne(sql, Seq(Some(email.normalized)))(userFromRs)
     }
 
   private def userFromRs(rs: ResultSet): User = {

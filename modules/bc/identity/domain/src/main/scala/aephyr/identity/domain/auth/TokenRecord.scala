@@ -1,12 +1,12 @@
 package aephyr.identity.domain.auth
 
-import aephyr.identity.domain.User
-
 import java.time.Instant
 
+import aephyr.identity.domain.User
+
 final case class TokenRecord(
-                                   hash: String,
-                                   userId: User.Id,
-                                   purpose: String,                // z.B. "login" | "verifyEmail" | …
-                                   expiresAt: Instant
-                                 )
+  hash: String,
+  userId: User.Id,
+  purpose: String, // z.B. "login" | "verifyEmail" | …
+  expiresAt: Instant
+)
