@@ -7,9 +7,10 @@
 
 package aephyr.kernel
 
-import StringOps.*
-import zio.test.*
-import zio.test.Assertion.*
+import zio.test.Assertion._
+import zio.test._
+
+import StringOps._
 
 object StringOpsSpec extends ZIOSpecDefault {
 
@@ -20,4 +21,3 @@ object StringOpsSpec extends ZIOSpecDefault {
       }
     )
 }
-

@@ -1,61 +1,65 @@
 package aephyr.identity.application
 
-import aephyr.config.MagicLinkCfg
-import aephyr.identity.domain.User
-import aephyr.identity.domain.auth.{AuthError, TokenStoreError}
-import aephyr.identity.application.ports.*
-import aephyr.shared.security.SecureRandom
-import zio.{Trace, UIO, ZIO, ZLayer}
-import zio.*
-import zio.logging.*
-
 import java.time.Instant
 import java.util.Base64
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
-import aephyr.kernel.DurationOps.*
+
+import aephyr.config.MagicLinkCfg
+import aephyr.identity.application.ports._
+import aephyr.identity.domain.User
+import aephyr.identity.domain.auth.{ AuthError, TokenStoreError }
+import aephyr.kernel.DurationOps._
+import aephyr.shared.security.SecureRandom
+import zio.logging._
+import zio.{ Trace, UIO, ZIO, ZLayer, _ }
 
 final case class MagicLinkServiceLive(
-                                       tokens: TokenStore,
-                                       email: EmailSender,
-                                       usersRead: UserReadPort,
-                                       usersWrite: UserWritePort,
-                                       cfg: MagicLinkCfg,
-                                       clock: Clock,
-                                       random: SecureRandom,
-                                       createMagicLink: String => String
-                                     ) extends MagicLinkService:
+  tokens: TokenStore,
+  email: EmailSender,
+  usersRead: UserReadPort,
+  usersWrite: UserWritePort,
+  cfg: MagicLinkCfg,
+  clock: Clock,
+  random: SecureRandom,
+  createMagicLink: String => String
+) extends MagicLinkService:
 
-  private def nowInstant: UIO[Instant] =
-    clock.instant
+  private def nowInstant: UIO[Instant] = clock.instant
 
   private def randToken(bytes: Int = 32): UIO[String] =
-    random.nextBytes(bytes).map { result =>
-      Base64.getUrlEncoder
-        .withoutPadding
-        .encodeToString(result)
+    random.nextBytes(bytes).map {
+      result =>
+        Base64.getUrlEncoder.withoutPadding
+          .encodeToString(result)
     }
 
-  private def hmacSha256Base64Url(hmacKey: SecretKeySpec, token: String): Task[String] =
+  private def hmacSha256Base64Url(
+    hmacKey: SecretKeySpec,
+    token: String
+  ): Task[String] =
     ZIO.attempt {
       val mac = Mac.getInstance("HmacSHA256")
       mac.init(hmacKey)
       val raw = mac.doFinal(token.getBytes("UTF-8"))
-      Base64.getUrlEncoder
-        .withoutPadding
+      Base64.getUrlEncoder.withoutPadding
         .encodeToString(raw)
     }
 
   /*
     returns always >ok< (no user enumeration).
-  */
-  override def sendMagicLink(reqEmail: User.EmailAddress, clientIp: String, ua: String)(using Trace): UIO[Unit] = {
+   */
+  override def sendMagicLink(
+    reqEmail: User.EmailAddress,
+    clientIp: String,
+    ua: String
+  )(using Trace): UIO[Unit] = {
     val emailNorm = reqEmail.normalized
     (for
-      now <- nowInstant
-      uid <- usersWrite.createPending(emailNorm, now)
+      now   <- nowInstant
+      uid   <- usersWrite.createPending(emailNorm, now)
       token <- randToken()
-      hash <- hmacSha256Base64Url(cfg.hmacSecretB64Url, token).orDie
+      hash  <- hmacSha256Base64Url(cfg.hmacSecretB64Url, token).orDie
       _ <- tokens.put(
         hash,
         uid,
@@ -64,11 +68,17 @@ final case class MagicLinkServiceLive(
         singleUse = true
       ) // TODO don't hardcode strings
       link = createMagicLink(token)
-      body = s"Klicke zum Anmelden: $link\nDieser Link ist ${cfg.ttl.minutes} Minuten gültig." // TODO get this text from somewhere else and use duration
-      _ <- email.send(emailNorm, "Your login link", s"<p>${body}</p>", body) // TODO also this text should come from a template
-    yield ()
-  ).catchAllCause { cause =>
-      ZIO.logErrorCause(s"sendMagicLink failed.", cause)
+      body =
+        s"Klicke zum Anmelden: $link\nDieser Link ist ${cfg.ttl.minutes} Minuten gültig." // TODO get this text from somewhere else and use duration
+      _ <- email.send(
+        emailNorm,
+        "Your login link",
+        s"<p>${body}</p>",
+        body
+      ) // TODO also this text should come from a template
+    yield ()).catchAllCause {
+      cause =>
+        ZIO.logErrorCause(s"sendMagicLink failed.", cause)
     }
   } @@ loggerName("app.email")
 
@@ -76,11 +86,13 @@ final case class MagicLinkServiceLive(
     for {
       now <- nowInstant
       hash <- hmacSha256Base64Url(cfg.hmacSecretB64Url, token)
-        .mapError(e =>
-          e.printStackTrace()
-          AuthError.Internal.apply(e)
+        .mapError(
+          e =>
+            e.printStackTrace()
+            AuthError.Internal.apply(e)
         ) // TODO don't leak internal data
-      rec <- tokens.consumeSingleUse(hash, now)
+      rec <- tokens
+        .consumeSingleUse(hash, now)
         .mapError {
           case TokenStoreError.InvalidOrExpired => AuthError.InvalidToken
           case e =>
@@ -89,28 +101,36 @@ final case class MagicLinkServiceLive(
         }
       user <- usersRead
         .findById(rec.userId)
-        .mapError(e =>
-          e.printStackTrace()
-          AuthError.Internal.apply(e)// TODO don't leak internal data
+        .mapError(
+          e =>
+            e.printStackTrace()
+            AuthError.Internal.apply(e) // TODO don't leak internal data
         )
-        .someOrFail({
+        .someOrFail {
           println("did not find user: " + rec.userId)
-          AuthError.InvalidToken})
+          AuthError.InvalidToken
+        }
       _ <- user.status match {
-        case User.Status.Pending  => usersWrite
-          .activate(user.id, now)
-          .mapError(e =>
-            AuthError.Internal.apply(e)
-          )
+        case User.Status.Pending =>
+          usersWrite
+            .activate(user.id, now)
+            .mapError(
+              e => AuthError.Internal.apply(e)
+            )
         case User.Status.Active   => ZIO.unit
         case User.Status.Disabled => ZIO.fail(AuthError.DisabledUser)
       }
       _ <- usersWrite
         .touchLastLogin(user.id, now)
-        .mapError(AuthError.Internal.apply)// TODO don't leak internal data
+        .mapError(AuthError.Internal.apply) // TODO don't leak internal data
     } yield user
 
 object MagicLinkServiceLive:
 
-  val layer: ZLayer[TokenStore & EmailSender & UserReadPort & UserWritePort & MagicLinkCfg & Clock & SecureRandom & (String => String), Nothing, MagicLinkService] =
+  val layer: ZLayer[
+    TokenStore & EmailSender & UserReadPort & UserWritePort & MagicLinkCfg &
+      Clock & SecureRandom & (String => String),
+    Nothing,
+    MagicLinkService
+  ] =
     ZLayer.fromFunction(MagicLinkServiceLive.apply)

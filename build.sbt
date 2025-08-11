@@ -1,10 +1,38 @@
 import Dependencies._
 
-ThisBuild / scalaVersion := V.scala3
-ThisBuild / organization := "life.aephyr"
+ThisBuild / scalaVersion      := V.scala3
+ThisBuild / organization      := "life.aephyr"
+ThisBuild / semanticdbEnabled := true
+// ThisBuild / semanticdbVersion := scalafixSemanticDb.revision
 ThisBuild / cancelable.withRank(KeyRanks.Invisible) := true
 
-apiServer / fork := true
+// Common for all subprojects
+ThisBuild / scalacOptions ++= Seq(
+  "-deprecation", // Warn about usage of deprecated APIs
+  "-feature", // Warn about features that should be explicitly imported/enabled
+  "-unchecked",        // Additional warnings for pattern matching
+  "-Wunused:imports",  // Warn on unused imports
+  "-Wunused:params",   // Warn on unused parameters
+  "-Wunused:privates", // Warn on unused private members
+  "-Wunused:locals",   // Warn on unused local variables
+  "-Wunused:patvars",  // Warn on unused pattern variables
+  "-Wunused:linted",   // Warn on unused linted definitions
+  "-Wvalue-discard",   // Warn when non-Unit value is discarded
+  "-Wnonunit-statement", // Warn when a statement returns non-Unit and is not used
+  "-Wsafe-init",      // Warn about uninitialized fields (safe initialization)
+  "-explain",         // Explain errors in detail
+  "-explain-types",   // Explain type errors in detail
+  "-Yexplicit-nulls", // Enable explicit nulls in Scala 3
+  "-language:strictEquality" // Require explicit Eq instances for equality
+//  "-language:noImplicitConversions"
+)
+
+// Only for development builds (not in production CI)
+//ThisBuild / scalacOptions ++= Seq(
+//  "-Xfatal-warnings" // Fail compilation on warnings
+//)
+
+apiServer / fork         := true
 apiServer / connectInput := true
 
 def mod(p: String, n: String) = Project.apply(n, file(s"modules/$p"))
@@ -12,10 +40,17 @@ def mod(p: String, n: String) = Project.apply(n, file(s"modules/$p"))
 lazy val root = (project in file("."))
   .aggregate(
     sharedKernel,
-    identityDomain, identityApplication,
-    diaryDomain, diaryApplication,
-    adaptersDb, adaptersMessaging, adaptersImport,
-    commandApi, queryApi, apiServer, dbMigrations
+    identityDomain,
+    identityApplication,
+    diaryDomain,
+    diaryApplication,
+    adaptersDb,
+    adaptersMessaging,
+    adaptersImport,
+    commandApi,
+    queryApi,
+    apiServer,
+    dbMigrations
   )
   .settings(publish / skip := true)
 
@@ -44,15 +79,16 @@ lazy val sharedApplication = mod("shared/application", "shared-application")
 lazy val identityDomain = mod("bc/identity/domain", "identity-domain")
   .dependsOn(sharedKernel)
 
-lazy val identityApplication = mod("bc/identity/application", "identity-application")
-  .dependsOn(identityDomain, sharedApplication)
-  .settings(
-    libraryDependencies ++= Seq(
-      Libs.zio,
-      Libs.zioLogging,
-      Libs.zioStacktracer
+lazy val identityApplication =
+  mod("bc/identity/application", "identity-application")
+    .dependsOn(identityDomain, sharedApplication)
+    .settings(
+      libraryDependencies ++= Seq(
+        Libs.zio,
+        Libs.zioLogging,
+        Libs.zioStacktracer
+      )
     )
-  )
 
 // -------- BC: diary
 lazy val diaryDomain = mod("bc/diary/domain", "diary-domain")
@@ -70,7 +106,7 @@ lazy val adaptersDb = mod("adapters/db", "adapters-db")
       Libs.zio,
       Libs.zioStacktracer,
       Libs.hikari,
-      Libs.postgres,
+      Libs.postgres
     ) ++ testLibs(
       Libs.noSlf4j,
       Libs.zioTest,
@@ -115,7 +151,15 @@ lazy val apisShared = mod("apis/shared", "apis-shared")
   )
 
 lazy val commandApi = mod("apis/command", "command-api")
-  .dependsOn(identityApplication, diaryApplication, sharedApplication, sharedKernel, adaptersDb, adaptersMessaging, apisShared)
+  .dependsOn(
+    identityApplication,
+    diaryApplication,
+    sharedApplication,
+    sharedKernel,
+    adaptersDb,
+    adaptersMessaging,
+    apisShared
+  )
   .settings(
     libraryDependencies ++= Seq(
       Libs.jsoniterCore,
@@ -167,7 +211,7 @@ lazy val apiServer = mod("apis/server", "api-server")
     Compile / mainClass := Some("aephyr.adapters.api.server.ApiServerMain")
   )
 
-lazy val dbMigrations  = mod("db-migrations", "db-migrations")
+lazy val dbMigrations = mod("db-migrations", "db-migrations")
   .settings(
     libraryDependencies ++= prod(
       Libs.postgres,

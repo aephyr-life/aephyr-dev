@@ -1,24 +1,24 @@
 package aephyr.adapters.db
 
+import java.time.Instant
+import java.util.UUID
+import javax.sql.DataSource
+
 import aephyr.identity.application.ports.TokenStore
 import aephyr.identity.domain.User
-import aephyr.identity.domain.auth.TokenStoreError.InvalidOrExpired
-import aephyr.identity.domain.auth.{TokenRecord, TokenStoreError}
-import zio.{IO, UIO, ZIO, ZLayer}
-
-import java.util.UUID
-import java.time.Instant
-import javax.sql.DataSource
+import aephyr.identity.domain.auth.{ TokenRecord, TokenStoreError }
+import aephyr.kernel.PersistenceError
+import zio.{ IO, ZIO, ZLayer }
 
 final case class TokenStoreLive(ds: DataSource) extends TokenStore:
 
   def put(
-           hash: String,
-           userId: User.Id,
-           purpose: String,
-           expiresAt: Instant,
-           singleUse: Boolean
-         ): IO[TokenStoreError, Unit] =
+    hash: String,
+    userId: User.Id,
+    purpose: String,
+    expiresAt: Instant,
+    singleUse: Boolean
+  ): IO[TokenStoreError, Unit] =
 
     import JdbcMini.*
 
@@ -33,16 +33,21 @@ final case class TokenStoreLive(ds: DataSource) extends TokenStore:
         |       used_at = null
         |""".stripMargin
 
-    JdbcMini.withConnection(ds) {
-      JdbcMini.execute(sql,
-        Seq(hash, userId, purpose, expiresAt.asTimestamp)
-      ).unit
-    }.mapError(TokenStoreError.DbError.apply)
+    JdbcMini
+      .withConnection(ds) {
+        JdbcMini
+          .execute(
+            sql,
+            Seq(hash, userId, purpose, expiresAt.asTimestamp).map(Some(_))
+          )
+          .unit
+      }
+      .mapError(TokenStoreError.DbError.apply)
 
   override def consumeSingleUse(
-                                 hash: String,
-                                 now: Instant
-                               ): IO[TokenStoreError, TokenRecord] = {
+    hash: String,
+    now: Instant
+  ): IO[TokenStoreError, TokenRecord] = {
 
     import JdbcMini.*
 
@@ -56,22 +61,27 @@ final case class TokenStoreLive(ds: DataSource) extends TokenStore:
         | returning ml.hash, ml.user_id, ml.purpose, ml.expires_at
         |""".stripMargin
 
-    JdbcMini.withConnection(ds) {
-      JdbcMini.queryOne(sql, Seq(hash, now.asTimestamp)) { rs =>
-        TokenRecord(
-          rs.getString("hash"),
-          User.Id(rs.getObject("user_id", classOf[UUID])),
-          rs.getString("purpose"),
-          rs.getTimestamp("expires_at").toInstant
-        )
+    JdbcMini
+      .withConnection(ds) {
+        JdbcMini.queryOne(sql, Seq(Some(hash), Some(now.asTimestamp))) {
+          rs =>
+            TokenRecord(
+              rs.getString("hash"),
+              User.Id(rs.getObject("user_id", classOf[UUID])),
+              rs.getString("purpose"),
+              rs.getTimestamp("expires_at").toInstant
+            )
+        }
       }
-    }.flatMap {
-      case Some(rec) => ZIO.succeed(rec)
-      case None => ZIO.fail(TokenStoreError.InvalidOrExpired)
-    }.mapError {
-      case TokenStoreError.InvalidOrExpired => TokenStoreError.InvalidOrExpired
-      case e => TokenStoreError.DbError(e)
-    }
+      .flatMap {
+        case Some(rec) => ZIO.succeed(rec)
+        case None      => ZIO.fail(TokenStoreError.InvalidOrExpired)
+      }
+      .catchAll {
+        case e: TokenStoreError  => ZIO.fail(e)
+        case e: PersistenceError => ZIO.fail(TokenStoreError.DbError(e))
+        case e: Throwable        => ZIO.fail(TokenStoreError.DbError(e))
+      }
   }
 
 object TokenStoreLive:

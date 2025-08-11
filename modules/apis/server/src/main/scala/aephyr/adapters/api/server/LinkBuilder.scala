@@ -7,18 +7,17 @@
 
 package aephyr.adapters.api.server
 
-import sttp.model.Uri
-import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.tapir._
 import aephyr.identity.api.query.MagicLinkQueryEndpoints
+import sttp.model.Uri
+import sttp.tapir._
+import sttp.tapir.client.sttp.SttpClientInterpreter
 
 final class LinkBuilder(baseUrl: String) {
-  
-  private val base = Uri.unsafeParse(baseUrl)
+
+  private val base   = Uri.unsafeParse(baseUrl)
   private val interp = SttpClientInterpreter()
-  private val magicReq = interp.toRequest(MagicLinkQueryEndpoints.consumeMagicLink, Some(base))
-  
-  def magicLink(token: String): String = {
-    magicReq(token).uri.toString
-  }
+  private val magicReq =
+    interp.toRequest(MagicLinkQueryEndpoints.consumeMagicLink, Some(base))
+
+  def magicLink(token: String): String = magicReq(token).uri.toString
 }

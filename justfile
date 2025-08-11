@@ -94,7 +94,12 @@ migrate:
 # formats the code
 [group('dev')]
 fmt:
-  sbt scalafmtAll
+  sbt "scalafmtAll; scalafmtSbt; scalafixAll"
+
+# lints the code
+[group('dev')]
+lint:
+    sbt "scalafmtCheckAll; scalafixAll --check"
 
 # updates flake.lock
 [group('dev')]
