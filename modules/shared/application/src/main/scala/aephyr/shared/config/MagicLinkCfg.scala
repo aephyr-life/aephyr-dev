@@ -5,7 +5,14 @@
 //  See LICENSE file in the project root for license text.
 //------------------------------------------------------------------------------
 
-package aephyr.config
+//------------------------------------------------------------------------------
+//  SPDX-License-Identifier: Aephyr-SAL-1.0
+//
+//  Licensed under the Aephyr Source Available License
+//  See LICENSE file in the project root for license text.
+//------------------------------------------------------------------------------
+
+package aephyr.shared.config
 
 import java.util.Base64
 import javax.crypto.spec.SecretKeySpec
@@ -22,12 +29,12 @@ final case class MagicLinkIssuance(
                                   )
 
 final case class MagicLinkLinks(
-                                 apiBaseUrl: String,  // used for emails, e.g. https://api.example.com
+                                 apiBaseUrl: BaseUrl,  // used for emails, e.g. https://api.example.com
                                )
 
 final case class MagicLinkRedirects(
-                                     successUrl: String,  // where the browser gets redirected after consuming
-                                     errorUrl: String
+                                     successUrl: BaseUrl,  // where the browser gets redirected after consuming
+                                     errorUrl: BaseUrl
                                    )
 
 final case class SessionCookieCfg(

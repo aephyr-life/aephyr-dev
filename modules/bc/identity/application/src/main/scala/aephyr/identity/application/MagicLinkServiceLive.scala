@@ -5,14 +5,14 @@ import java.util.Base64
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-import aephyr.config.MagicLinkIssuance
 import aephyr.identity.application.ports._
 import aephyr.identity.domain.User
 import aephyr.identity.domain.auth.{ AuthError, TokenStoreError }
 import aephyr.kernel.DurationOps._
+import aephyr.shared.config.MagicLinkIssuance
 import aephyr.shared.security.SecureRandom
+import zio._
 import zio.logging._
-import zio.{ Trace, UIO, ZIO, ZLayer, _ }
 
 // TODO add cooldown per email/IP (1 link / 60s, 5 / hour)
 final case class MagicLinkServiceLive(
@@ -122,8 +122,8 @@ final case class MagicLinkServiceLive(
 object MagicLinkServiceLive:
 
   val layer: ZLayer[
-    TokenStore & EmailSender & UserReadPort & UserWritePort & MagicLinkIssuance &
-      Clock & SecureRandom & (String => String),
+    TokenStore & EmailSender & UserReadPort & UserWritePort &
+      MagicLinkIssuance & Clock & SecureRandom & (String => String),
     Nothing,
     MagicLinkService
   ] =

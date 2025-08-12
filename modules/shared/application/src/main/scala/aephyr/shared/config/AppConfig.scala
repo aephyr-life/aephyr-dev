@@ -1,4 +1,11 @@
-package aephyr.config
+//------------------------------------------------------------------------------
+//  SPDX-License-Identifier: Aephyr-SAL-1.0
+//
+//  Licensed under the Aephyr Source Available License
+//  See LICENSE file in the project root for license text.
+//------------------------------------------------------------------------------
+
+package aephyr.shared.config
 
 import zio.*
 import zio.config.ConfigOps
@@ -6,9 +13,6 @@ import zio.config.magnolia.*
 import zio.config.typesafe.*
 import aephyr.kernel.StringOps.*
 
-import java.util.Base64
-import javax.crypto.spec.SecretKeySpec
-import scala.util.Try
 
 final case class HttpCfg(host: String, port: Int)
 
@@ -30,7 +34,14 @@ final case class AppConfig(
 
 object AppConfig:
 
-  import aephyr.config.MagicLinkCfg.given 
+  import MagicLinkCfg.given
+
+  given Config[BaseUrl] = {
+    Config.string
+      .mapOrFail(s => BaseUrl.parse(s).left.map(
+        t => Config.Error.InvalidData(Chunk.empty, t))
+      )
+  }
   
   private val desc = deriveConfig[AppConfig]
     .nested("app")

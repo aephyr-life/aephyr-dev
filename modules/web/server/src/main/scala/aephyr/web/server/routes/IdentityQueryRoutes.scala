@@ -19,7 +19,7 @@ import zio._
 object IdentityQueryRoutes:
 
   private val consumeMagicLink: ZServerEndpoint[MagicLinkService, Any] =
-    MagicLinkQueryEndpoints.consumeMagicLink.zServerLogic[MagicLinkService] {
+    MagicLinkQueryEndpoints.redeemMagicLink.zServerLogic[MagicLinkService] {
       req =>
         ZIO
           .serviceWithZIO[MagicLinkService](_.consumeMagicLink(req))

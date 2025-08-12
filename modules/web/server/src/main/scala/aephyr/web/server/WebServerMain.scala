@@ -22,9 +22,9 @@ import aephyr.adapters.db.{
 }
 import aephyr.adapters.messaging.EmailSenderLive
 import aephyr.adapters.security.SecureRandomLive
-import aephyr.config.{ AppConfig, MagicLinkCfg }
 import aephyr.identity.application.ports.TokenStore
 import aephyr.identity.application.{ MagicLinkService, MagicLinkServiceLive }
+import aephyr.shared.config.{ AppConfig, MagicLinkCfg }
 import zio.http._
 import zio.logging.backend.SLF4J
 import zio.{ Clock, _ }

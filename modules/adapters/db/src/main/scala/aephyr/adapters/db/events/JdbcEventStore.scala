@@ -9,7 +9,7 @@ package aephyr.adapters.db.events
 
 import javax.sql.DataSource
 
-import aephyr.adapters.db.{JdbcMini => J}
+import aephyr.adapters.db.{ JdbcMini => J }
 import aephyr.kernel.PersistenceError
 import aephyr.kernel.events._
 import zio._
