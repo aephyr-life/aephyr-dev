@@ -27,10 +27,10 @@ object IdentityBrowserRoutes:
       path = Option(cfg.cookie.path).orElse(Some("/")).map(Path.apply),
       isSecure = cfg.cookie.secure,
       isHttpOnly = cfg.cookie.httpOnly,
-      sameSite = cfg.cookie.sameSite.toLowerCase match
-        case "lax"    => Some(Cookie.SameSite.Lax)
-        case "strict" => Some(Cookie.SameSite.Strict)
-        case "none"   => Some(Cookie.SameSite.None)
+      sameSite = Option(cfg.cookie.sameSite.toLowerCase) match
+        case Some("lax")    => Some(Cookie.SameSite.Lax)
+        case Some("strict") => Some(Cookie.SameSite.Strict)
+        case Some("none")   => Some(Cookie.SameSite.None)
         case _        => Some(Cookie.SameSite.Lax),
       maxAge = cfg.cookie.maxAgeSec.map(Duration.fromSeconds(_))
     )
