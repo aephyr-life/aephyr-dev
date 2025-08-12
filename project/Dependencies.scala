@@ -5,7 +5,7 @@ import scala.:+
 object Dependencies {
 
   object V {
-    val scala3           = "3.7.2"
+    val scala3           = "3.3.6"
     val jsoniter         = "2.37.1"
     val logback          = "1.5.6"
     val slf4j            = "2.0.13"

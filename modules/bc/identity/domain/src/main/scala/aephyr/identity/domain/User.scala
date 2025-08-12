@@ -15,7 +15,7 @@ object User:
 
   opaque type Id = UUID
   object Id:
-    def apply(): Id           = UUID.randomUUID()
+    def apply(): Id           = UUID.randomUUID().nn
     def apply(uuid: UUID): Id = uuid
 
   extension (x: Id) def value: UUID = x
@@ -26,8 +26,9 @@ object User:
   object EmailAddress:
     def apply(email: String): EmailAddress = email
 
-  extension (x: EmailAddress) def normalized: EmailAddress = x.trim.toLowerCase
-  given CanEqual[EmailAddress, EmailAddress]               = CanEqual.derived
+  extension (x: EmailAddress)
+    def normalized: EmailAddress             = x.trim.nn.toLowerCase.nn
+  given CanEqual[EmailAddress, EmailAddress] = CanEqual.derived
 
   enum Status derives CanEqual:
     case Pending, Active, Disabled

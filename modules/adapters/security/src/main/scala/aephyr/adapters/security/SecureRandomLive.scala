@@ -17,8 +17,8 @@ final case class SecureRandomLive(random: JavaRandom) extends SecureRandom:
   }
   override def nextBytesAsBase64(length: Int): UIO[String] = {
     nextBytes(length).map(arr =>
-      Base64.getUrlEncoder.withoutPadding
-        .encodeToString(arr)
+      Base64.getUrlEncoder.nn.withoutPadding.nn
+        .encodeToString(arr).nn
     )
   }
 

@@ -1,30 +1,50 @@
 import Dependencies._
 
-ThisBuild / scalaVersion      := V.scala3
-ThisBuild / organization      := "life.aephyr"
+ThisBuild / organization  := "life.aephyr"
+ThisBuild / scalaVersion  := V.scala3
+ThisBuild / versionScheme := Some("early-semver")
+
+//ThisBuild / conflictManager := ConflictManager.strict
+ThisBuild / updateOptions := updateOptions.value.withLatestSnapshots(false)
+
 ThisBuild / semanticdbEnabled := true
 // ThisBuild / semanticdbVersion := scalafixSemanticDb.revision
 ThisBuild / cancelable.withRank(KeyRanks.Invisible) := true
 
-// Common for all subprojects
 ThisBuild / scalacOptions ++= Seq(
-  "-deprecation", // Warn about usage of deprecated APIs
-  "-feature", // Warn about features that should be explicitly imported/enabled
-  "-unchecked",        // Additional warnings for pattern matching
-  "-Wunused:imports",  // Warn on unused imports
-  "-Wunused:params",   // Warn on unused parameters
-  "-Wunused:privates", // Warn on unused private members
-  "-Wunused:locals",   // Warn on unused local variables
-  "-Wunused:patvars",  // Warn on unused pattern variables
-  "-Wunused:linted",   // Warn on unused linted definitions
-  "-Wvalue-discard",   // Warn when non-Unit value is discarded
-  "-Wnonunit-statement", // Warn when a statement returns non-Unit and is not used
-  "-Wsafe-init",      // Warn about uninitialized fields (safe initialization)
-  "-explain",         // Explain errors in detail
-  "-explain-types",   // Explain type errors in detail
-  "-Yexplicit-nulls", // Enable explicit nulls in Scala 3
-  "-language:strictEquality" // Require explicit Eq instances for equality
-//  "-language:noImplicitConversions"
+  "-deprecation",
+  "-feature",
+  "-unchecked",
+  "-Wunused:all",
+  "-Wvalue-discard",
+  "-Wnonunit-statement",
+  "-explain",
+  "-explain-types",
+  "-Yexplicit-nulls",
+  "-language:strictEquality"
+)
+
+ThisBuild / testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
+
+ThisBuild / dependencyOverrides := Seq(
+  Libs.zio,
+  Libs.zioStreams,
+  Libs.zioIzumi,
+  Libs.zioLogging,
+  Libs.zioLoggingSlf4j2,
+  Libs.sttpModel,
+  Libs.sttpSharedCore,
+  Libs.sttpSharedZio
+)
+
+ThisBuild / libraryDependencies ++= testLibs(
+  Libs.noSlf4j,
+  Libs.zio,
+  Libs.zioTest,
+  Libs.zioTestSbt,
+  Libs.embeddedPostgres,
+  Libs.flyway,
+  Libs.flywayPostgres
 )
 
 // Only for development builds (not in production CI)
@@ -55,14 +75,6 @@ lazy val root = (project in file("."))
   .settings(publish / skip := true)
 
 lazy val sharedKernel = mod("shared/kernel", "shared-kernel")
-  .settings(
-    libraryDependencies ++= testLibs(
-      Libs.zio,
-      Libs.zioTest,
-      Libs.zioTestSbt
-    ),
-    testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
-  )
 
 lazy val sharedApplication = mod("shared/application", "shared-application")
   .dependsOn(sharedKernel)
@@ -107,15 +119,7 @@ lazy val adaptersDb = mod("adapters/db", "adapters-db")
       Libs.zioStacktracer,
       Libs.hikari,
       Libs.postgres
-    ) ++ testLibs(
-      Libs.noSlf4j,
-      Libs.zioTest,
-      Libs.zioTestSbt,
-      Libs.embeddedPostgres,
-      Libs.flyway,
-      Libs.flywayPostgres
-    ),
-    testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
+    )
   )
 
 lazy val adaptersMessaging = mod("adapters/messaging", "adapters-messaging")

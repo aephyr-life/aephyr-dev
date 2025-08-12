@@ -1,5 +1,8 @@
 package aephyr.adapters.db
 
+// scalafix:off
+import scala.language.unsafeNulls
+
 import java.sql.{
   Connection,
   PreparedStatement,
@@ -11,17 +14,11 @@ import java.time.Instant
 import java.util.UUID
 import javax.sql.DataSource
 
+import zio.*
+
 import aephyr.kernel.PersistenceError
-import aephyr.kernel.PersistenceError.{
-  CheckViolation,
-  DeadlockDetected,
-  ForeignKeyViolation,
-  SerializationFailure,
-  Timeout,
-  UniqueViolation,
-  Unknown
-}
-import zio._
+import aephyr.kernel.PersistenceError.*
+// scalafix:on
 
 object JdbcMini {
 

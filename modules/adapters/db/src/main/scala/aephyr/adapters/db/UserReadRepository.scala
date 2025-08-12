@@ -4,6 +4,8 @@ import java.sql.ResultSet
 import java.util.UUID
 import javax.sql.DataSource
 
+import scala.language.unsafeNulls
+
 import aephyr.identity.application.ports.UserReadPort
 import aephyr.identity.domain.User
 import aephyr.identity.domain.User.EmailAddress
