@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Install Nix (with flakes)
+      - name: Install Nix
+        uses: cachix/install-nix-action@v30
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+            experimental-features = nix-command flakes
+
+      # (Optional) Use Cachix to speed up Nix builds if you like
+      # - name: Use Cachix
+      #   uses: cachix/cachix-action@v16
+      #   with:
+      #     name: your-cache
+      #     authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      # Cache sbt/ivy/coursier to speed up Scala dependency resolution
+      - name: Cache Ivy / Coursier / sbt
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.ivy2/cache
+            ~/.cache/coursier
+            ~/.sbt
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt', '**/project/**') }}
+          restore-keys: |
+            ${{ runner.os }}-sbt-
+
+      # Enter your Nix devShell & run tests
+      - name: Run tests (sbt)
+        run: nix develop -c sbt -v test
+
+      # If you cross-build, you can do:
+      # - run: nix develop -c sbt +test
+
+      # (Optional) publish test reports as artifacts
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            **/target/test-reports/**
+            **/target/surefire-reports/**
+            **/target/scala-*/test-reports/**
+            **/target/scala-*/scoverage-report/**
+          if-no-files-found: ignore
+          

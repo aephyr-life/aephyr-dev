@@ -15,6 +15,7 @@
           buildInputs = [
             pkgs.jdk17
             pkgs.sbt
+            pkgs.git
             pkgs.just
             pkgs.postgresql_16
           ];
@@ -26,6 +27,8 @@
             export PGDATABASE=aephyr
 
             mkdir -p "$PG_DIR"
+
+            export SBT_OPTS="-Xms2G -Xmx2G -XX:+UseG1GC"
             # minimal noise:
             :
           '';
