@@ -25,7 +25,9 @@ import aephyr.adapters.security.SecureRandomLive
 import aephyr.identity.application.ports.TokenStore
 import aephyr.identity.application.{ MagicLinkService, MagicLinkServiceLive }
 import aephyr.shared.config.{ AppConfig, MagicLinkCfg }
+
 import aephyr.web.server.routes.api.ApiRoutes
+
 import zio.http._
 import zio.logging.backend.SLF4J
 import zio.{ Clock, _ }
