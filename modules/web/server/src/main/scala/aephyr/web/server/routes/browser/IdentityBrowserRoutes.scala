@@ -7,12 +7,14 @@
 
 package aephyr.web.server.routes.browser
 
+import scala.language.unsafeNulls
+
 import aephyr.identity.application.MagicLinkService
 import aephyr.identity.domain.auth.AuthError
-import aephyr.shared.config.{BaseUrl, MagicLinkCfg}
+import aephyr.shared.config.{ BaseUrl, MagicLinkCfg }
 import aephyr.shared.security.SecureRandom
-import zio.*
-import zio.http.*
+import zio._
+import zio.http._
 import zio.http.codec.PathCodec
 
 object IdentityBrowserRoutes:

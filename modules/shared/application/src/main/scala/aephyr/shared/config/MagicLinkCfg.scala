@@ -5,13 +5,6 @@
 //  See LICENSE file in the project root for license text.
 //------------------------------------------------------------------------------
 
-//------------------------------------------------------------------------------
-//  SPDX-License-Identifier: Aephyr-SAL-1.0
-//
-//  Licensed under the Aephyr Source Available License
-//  See LICENSE file in the project root for license text.
-//------------------------------------------------------------------------------
-
 package aephyr.shared.config
 
 import java.util.Base64
@@ -65,10 +58,10 @@ object MagicLinkCfg:
   given Config[SecretKeySpec] = {
     Config.string.mapOrFail { s =>
       Try {
-        new SecretKeySpec(Base64.getUrlDecoder.decode(s), "HmacSHA256")
+        new SecretKeySpec(Base64.getUrlDecoder.nn.decode(s), "HmacSHA256")
       }
         .toEither
-        .left.map(t => Config.Error.InvalidData(Chunk.empty, t.getMessage))
+        .left.map(t => Config.Error.InvalidData(Chunk.empty, t.getMessage.nn))
     }
   }
   

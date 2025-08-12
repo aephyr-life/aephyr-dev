@@ -11,17 +11,12 @@ import java.time.Instant
 import java.util.UUID
 import javax.sql.DataSource
 
+import scala.language.unsafeNulls
+
+import zio.*
+
 import aephyr.kernel.PersistenceError
-import aephyr.kernel.PersistenceError.{
-  CheckViolation,
-  DeadlockDetected,
-  ForeignKeyViolation,
-  SerializationFailure,
-  Timeout,
-  UniqueViolation,
-  Unknown
-}
-import zio._
+import aephyr.kernel.PersistenceError.*
 
 object JdbcMini {
 

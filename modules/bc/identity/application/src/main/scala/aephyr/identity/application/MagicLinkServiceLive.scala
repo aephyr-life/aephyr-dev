@@ -33,11 +33,12 @@ final case class MagicLinkServiceLive(
     token: String
   ): Task[String] =
     ZIO.attempt {
-      val mac = Mac.getInstance("HmacSHA256")
+      val mac = Mac.getInstance("HmacSHA256").nn
       mac.init(hmacKey)
-      val raw = mac.doFinal(token.getBytes("UTF-8"))
-      Base64.getUrlEncoder.withoutPadding
+      val raw = mac.doFinal(token.getBytes("UTF-8")).nn
+      Base64.getUrlEncoder.nn.withoutPadding.nn
         .encodeToString(raw)
+        .nn
     }
 
   /*
@@ -58,7 +59,7 @@ final case class MagicLinkServiceLive(
         hash,
         uid,
         "login",
-        now.plusSeconds(cfg.ttl.getSeconds),
+        now.plusSeconds(cfg.ttl.getSeconds).nn,
         singleUse = true
       ) // TODO don't hardcode strings
       link = createMagicLink(token)

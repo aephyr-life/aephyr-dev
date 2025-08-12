@@ -16,9 +16,15 @@ object Migration:
     val pass = sys.env("FLYWAY_PASSWORD")
     Flyway
       .configure()
+      .nn
       .dataSource(url, user, pass)
+      .nn
       .schemas("events", "read", "tech")
+      .nn
       .locations("classpath:db/migration")
+      .nn
       .baselineOnMigrate(true)
+      .nn
       .load()
+      .nn
       .migrate(): Unit

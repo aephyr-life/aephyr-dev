@@ -7,14 +7,12 @@
 
 package aephyr.web.server.routes.api
 
-import aephyr.identity.application.MagicLinkService
-import aephyr.identity.api.query.*
-import aephyr.identity.api.command.*
 import aephyr.api.ErrorMappings
-
-import sttp.tapir.ztapir.*
-import zio.*
-import zio.http.*
+import aephyr.identity.api.command._
+import aephyr.identity.api.query._
+import aephyr.identity.application.MagicLinkService
+import sttp.tapir.ztapir._
+import zio._
 
 object IdentityApiRoutes {
 
@@ -52,6 +50,7 @@ object IdentityApiRoutes {
     }
 
   val all = List(
-    requestMagicLinkToken, redeemMagicLinkToken
+    requestMagicLinkToken,
+    redeemMagicLinkToken
   )
 }

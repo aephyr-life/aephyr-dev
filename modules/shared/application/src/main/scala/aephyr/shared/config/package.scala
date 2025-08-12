@@ -16,12 +16,16 @@ package object config {
   object BaseUrl {
     /** Ensure absolute  URL, drop trailing slash */
     def parse(raw: String): Either[String, BaseUrl] =
-      val s = raw.trim
-      Try(new URI(s)).toEither.left.map(_.getMessage).flatMap { uri =>
-        if (!uri.isAbsolute) Left("BaseUrl must be absolute")
-        else if (s.endsWith("/")) Left("BaseUrl can not have a trailing slash")
-        else Right(s)
-      }
+      val s = raw.trim.nn
+      Try(new URI(s))
+        .toEither
+        .left
+        .map(_.getMessage.nn)
+        .flatMap { uri =>
+          if (!uri.isAbsolute) Left("BaseUrl must be absolute")
+          else if (s.endsWith("/")) Left("BaseUrl can not have a trailing slash")
+          else Right(s)
+        }
 
     def unsafe(raw: String): BaseUrl =
       parse(raw).fold(err => throw new IllegalArgumentException(err), identity)

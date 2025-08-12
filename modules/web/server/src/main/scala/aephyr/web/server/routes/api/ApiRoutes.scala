@@ -6,32 +6,31 @@
 //------------------------------------------------------------------------------
 
 package aephyr.web.server.routes.api
-
-import aephyr.identity.api.command.IdentityCommandEndpoints
-import aephyr.identity.api.query.IdentityQueryEndpoints
 import aephyr.identity.application.MagicLinkService
-import sttp.tapir.redoc.RedocUIOptions
-import sttp.tapir.redoc.bundle.RedocInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import zio.*
-import zio.http.*
-import sttp.tapir.AnyEndpoint
-
+import sttp.tapir.ztapir._
+import zio._
+import zio.http._
 
 object ApiRoutes:
 
-  type Env = aephyr.identity.application.MagicLinkService
+  type Env = MagicLinkService
 
-  private val apiEndpoints: List[sttp.tapir.ztapir.ZServerEndpoint[aephyr.identity.application.MagicLinkService, Any]] =
+  private val apiEndpoints: List[ZServerEndpoint[MagicLinkService, Any]] =
     IdentityApiRoutes.all
 
   // Your business routes built from server endpoints
   private val apiRoutes: Routes[Env, Response] =
-    ZioInterpreter().toRoutes(apiEndpoints)
+    ZioHttpInterpreter().toHttp(apiEndpoints)
 
   // Docs built from the *plain* endpoints
   private val docsRoutesAny: Routes[Any, Response] =
-    RedocRoutes.fromEndpoints(apiEndpoints.map(_.endpoint), title = "Aephyr API", version = "v0", pathPrefix = List("api"))
+    RedocRoutes.fromEndpoints(
+      apiEndpoints.map(_.endpoint),
+      title = "Aephyr API",
+      version = "v0",
+      pathPrefix = List("api")
+    )
 
   // Widen docs to your Env so you can combine
   private val docsRoutes: Routes[Env, Response] =

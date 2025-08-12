@@ -4,6 +4,8 @@ import java.time.Instant
 import java.util.UUID
 import javax.sql.DataSource
 
+import scala.language.unsafeNulls
+
 import aephyr.identity.application.ports.TokenStore
 import aephyr.identity.domain.User
 import aephyr.identity.domain.auth.{ TokenRecord, TokenStoreError }
