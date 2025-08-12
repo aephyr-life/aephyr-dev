@@ -57,5 +57,5 @@ object MagicLinkCommandEndpoints:
         )
       )
       .description("Request a passwordless magic link to be sent via email")
-      .name("request login link")
+      .name("request login token")
       .tag("auth-magiclink")

@@ -32,8 +32,8 @@ ThisBuild / scalacOptions ++= Seq(
 //  "-Xfatal-warnings" // Fail compilation on warnings
 //)
 
-apiServer / fork         := true
-apiServer / connectInput := true
+webServer / fork         := true
+webServer / connectInput := true
 
 def mod(p: String, n: String) = Project.apply(n, file(s"modules/$p"))
 
@@ -49,7 +49,7 @@ lazy val root = (project in file("."))
     adaptersImport,
     commandApi,
     queryApi,
-    apiServer,
+    webServer,
     dbMigrations
   )
   .settings(publish / skip := true)
@@ -183,7 +183,7 @@ lazy val queryApi = mod("apis/query", "query-api")
     )
   )
 
-lazy val apiServer = mod("apis/server", "api-server")
+lazy val webServer = mod("web/server", "web-server")
   .dependsOn(apisShared, sharedKernel, commandApi, adaptersSecurity, queryApi)
   .settings(
     libraryDependencies ++= Seq(

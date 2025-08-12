@@ -5,34 +5,28 @@ import java.util.Base64
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-import aephyr.config.MagicLinkCfg
 import aephyr.identity.application.ports._
 import aephyr.identity.domain.User
 import aephyr.identity.domain.auth.{ AuthError, TokenStoreError }
 import aephyr.kernel.DurationOps._
+import aephyr.shared.config.MagicLinkIssuance
 import aephyr.shared.security.SecureRandom
+import zio._
 import zio.logging._
-import zio.{ Trace, UIO, ZIO, ZLayer, _ }
 
+// TODO add cooldown per email/IP (1 link / 60s, 5 / hour)
 final case class MagicLinkServiceLive(
   tokens: TokenStore,
   email: EmailSender,
   usersRead: UserReadPort,
   usersWrite: UserWritePort,
-  cfg: MagicLinkCfg,
+  cfg: MagicLinkIssuance,
   clock: Clock,
   random: SecureRandom,
   createMagicLink: String => String
 ) extends MagicLinkService:
 
   private def nowInstant: UIO[Instant] = clock.instant
-
-  private def randToken(bytes: Int = 32): UIO[String] =
-    random.nextBytes(bytes).map {
-      result =>
-        Base64.getUrlEncoder.withoutPadding
-          .encodeToString(result)
-    }
 
   private def hmacSha256Base64Url(
     hmacKey: SecretKeySpec,
@@ -58,7 +52,7 @@ final case class MagicLinkServiceLive(
     (for
       now   <- nowInstant
       uid   <- usersWrite.createPending(emailNorm, now)
-      token <- randToken()
+      token <- random.nextBytesAsBase64(32)
       hash  <- hmacSha256Base64Url(cfg.hmacSecretB64Url, token).orDie
       _ <- tokens.put(
         hash,
@@ -128,8 +122,8 @@ final case class MagicLinkServiceLive(
 object MagicLinkServiceLive:
 
   val layer: ZLayer[
-    TokenStore & EmailSender & UserReadPort & UserWritePort & MagicLinkCfg &
-      Clock & SecureRandom & (String => String),
+    TokenStore & EmailSender & UserReadPort & UserWritePort &
+      MagicLinkIssuance & Clock & SecureRandom & (String => String),
     Nothing,
     MagicLinkService
   ] =

@@ -1,6 +1,6 @@
 package aephyr.adapters.db
 
-import aephyr.config.DbCfg
+import aephyr.shared.config.DbCfg
 import com.zaxxer.hikari.HikariDataSource
 import zio.{ ZIO, ZLayer }
 

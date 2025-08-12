@@ -76,10 +76,10 @@ clean:
 test:
   sbt test
 
-# starts the api server
+# starts the web server
 [group('dev')]
 run:
-  sbt api-server/run
+  sbt web-server/run
 
 # opens a repl
 [group('dev')]

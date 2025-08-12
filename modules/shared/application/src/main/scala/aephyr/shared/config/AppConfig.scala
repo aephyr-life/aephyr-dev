@@ -1,4 +1,11 @@
-package aephyr.config
+//------------------------------------------------------------------------------
+//  SPDX-License-Identifier: Aephyr-SAL-1.0
+//
+//  Licensed under the Aephyr Source Available License
+//  See LICENSE file in the project root for license text.
+//------------------------------------------------------------------------------
+
+package aephyr.shared.config
 
 import zio.*
 import zio.config.ConfigOps
@@ -6,9 +13,6 @@ import zio.config.magnolia.*
 import zio.config.typesafe.*
 import aephyr.kernel.StringOps.*
 
-import java.util.Base64
-import javax.crypto.spec.SecretKeySpec
-import scala.util.Try
 
 final case class HttpCfg(host: String, port: Int)
 
@@ -16,24 +20,6 @@ final case class DbPoolCfg(maxSize: Int, queueSize: Int)
 final case class DbCfg(url: String, user: String, password: String, pool: DbPoolCfg)
 
 final case class SmtpCfg(host: String, port: Int, startTls: Boolean)
-final case class DeliveryCfg(from: String, smtp: SmtpCfg)
-
-final case class MagicLinkCfg(
-                               ttl: Duration,
-                               ttlMinutes: Int,
-                               baseUrl: String,
-                               hmacSecretB64Url: SecretKeySpec,
-                               delivery: DeliveryCfg
-                             )
-object MagicLinkCfg:
-  
-  given Config[SecretKeySpec] = {
-    Config.string.mapOrFail { s =>
-      Try { new SecretKeySpec(Base64.getUrlDecoder.decode(s), "HmacSHA256") }
-        .toEither
-        .left.map(t => Config.Error.InvalidData(Chunk.empty, t.getMessage))
-    }
-  }
 
 final case class AuthCfg(magicLink: MagicLinkCfg)
 
@@ -48,7 +34,14 @@ final case class AppConfig(
 
 object AppConfig:
 
-  import aephyr.config.MagicLinkCfg.given 
+  import MagicLinkCfg.given
+
+  given Config[BaseUrl] = {
+    Config.string
+      .mapOrFail(s => BaseUrl.parse(s).left.map(
+        t => Config.Error.InvalidData(Chunk.empty, t))
+      )
+  }
   
   private val desc = deriveConfig[AppConfig]
     .nested("app")
@@ -87,3 +80,6 @@ object AppConfig:
 
   val magicLink: ZLayer[AppConfig, Nothing, MagicLinkCfg] =
     ZLayer.fromFunction((c: AppConfig) => c.auth.magicLink)
+
+  val magicLinkIssuance: ZLayer[AppConfig, Nothing, MagicLinkIssuance] =
+    ZLayer.fromFunction((c: AppConfig) => c.auth.magicLink.issuance)
