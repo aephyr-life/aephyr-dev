@@ -1,5 +1,8 @@
 package aephyr.adapters.db
 
+// scalafix:off
+import scala.language.unsafeNulls
+
 import java.sql.{
   Connection,
   PreparedStatement,
@@ -11,12 +14,11 @@ import java.time.Instant
 import java.util.UUID
 import javax.sql.DataSource
 
-import scala.language.unsafeNulls
-
 import zio.*
 
 import aephyr.kernel.PersistenceError
 import aephyr.kernel.PersistenceError.*
+// scalafix:on
 
 object JdbcMini {
 
