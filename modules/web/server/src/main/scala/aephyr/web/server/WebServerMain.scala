@@ -14,20 +14,16 @@
 
 package aephyr.web.server
 
-import aephyr.adapters.db.{
-  DataSourceLayer,
-  TokenStoreLive,
-  UserReadRepository,
-  UserWriteRepository
-}
+import aephyr.adapters.db.{DataSourceLayer, TokenStoreLive, UserReadRepository, UserWriteRepository}
 import aephyr.adapters.messaging.EmailSenderLive
 import aephyr.adapters.security.SecureRandomLive
 import aephyr.identity.application.ports.TokenStore
-import aephyr.identity.application.{ MagicLinkService, MagicLinkServiceLive }
-import aephyr.shared.config.{ AppConfig, MagicLinkCfg }
-import zio.http._
+import aephyr.identity.application.{MagicLinkService, MagicLinkServiceLive}
+import aephyr.shared.config.{AppConfig, MagicLinkCfg}
+import aephyr.web.server.routes.api.ApiRoutes
+import zio.http.*
 import zio.logging.backend.SLF4J
-import zio.{ Clock, _ }
+import zio.{Clock, *}
 
 object WebServerMain extends ZIOAppDefault:
 
@@ -39,7 +35,7 @@ object WebServerMain extends ZIOAppDefault:
       for {
         _ <- ZIO.addFinalizer(ZIO.logInfo("🛑 Shutting down server..."))
         _ <- Server
-          .serve(routes.ApiRoutes.all)
+          .serve(ApiRoutes.routes)
           .provide(
             Server.defaultWithPort(8080), // TODO get Port from config
             MagicLinkServiceLive.layer,

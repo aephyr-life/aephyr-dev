@@ -1,11 +1,18 @@
-package aephyr.web.server.routes
+//------------------------------------------------------------------------------
+//  SPDX-License-Identifier: Aephyr-SAL-1.0
+//
+//  Licensed under the Aephyr Source Available License
+//  See LICENSE file in the project root for license text.
+//------------------------------------------------------------------------------
+
+package aephyr.web.server.routes.browser
 
 import aephyr.identity.application.MagicLinkService
 import aephyr.identity.domain.auth.AuthError
-import aephyr.shared.config.{ BaseUrl, MagicLinkCfg }
+import aephyr.shared.config.{BaseUrl, MagicLinkCfg}
 import aephyr.shared.security.SecureRandom
-import zio._
-import zio.http._
+import zio.*
+import zio.http.*
 import zio.http.codec.PathCodec
 
 object IdentityBrowserRoutes:

@@ -5,19 +5,34 @@
 //  See LICENSE file in the project root for license text.
 //------------------------------------------------------------------------------
 
-package aephyr.web.server.routes
+package aephyr.web.server.routes.api
 
-import aephyr.identity.api.command.{
-  MagicLinkCommandEndpoints,
-  MagicLinkCreationResponse
-}
 import aephyr.identity.application.MagicLinkService
-import sttp.tapir.ztapir._
-import zio._
+import aephyr.identity.api.query.*
+import aephyr.identity.api.command.*
+import aephyr.api.ErrorMappings
 
-object IdentityCommandRoutes:
+import sttp.tapir.ztapir.*
+import zio.*
+import zio.http.*
 
-  val requestMagicLink: ZServerEndpoint[MagicLinkService, Any] =
+object IdentityApiRoutes {
+
+  private val redeemMagicLinkToken: ZServerEndpoint[MagicLinkService, Any] =
+    MagicLinkQueryEndpoints.redeemMagicLink.zServerLogic[MagicLinkService] {
+      req =>
+        ZIO
+          .serviceWithZIO[MagicLinkService](_.consumeMagicLink(req))
+          .mapError(ErrorMappings.fromAuth)
+          .as(
+            MagicLinkConsumptionResponse(
+              "If an account exists for this email, " +
+                "a sign-in link has been sent."
+            )
+          )
+    }
+
+  val requestMagicLinkToken: ZServerEndpoint[MagicLinkService, Any] =
     MagicLinkCommandEndpoints.requestMagicLink.zServerLogic[MagicLinkService] {
       req =>
         ZIO
@@ -37,5 +52,6 @@ object IdentityCommandRoutes:
     }
 
   val all = List(
-    requestMagicLink
+    requestMagicLinkToken, redeemMagicLinkToken
   )
+}
