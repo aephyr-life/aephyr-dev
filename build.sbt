@@ -37,7 +37,7 @@ ThisBuild / dependencyOverrides := Seq(
   Libs.sttpSharedZio
 )
 
-libraryDependencies ++= testLibs(
+ThisBuild / libraryDependencies ++= testLibs(
   Libs.noSlf4j,
   Libs.zio,
   Libs.zioTest,

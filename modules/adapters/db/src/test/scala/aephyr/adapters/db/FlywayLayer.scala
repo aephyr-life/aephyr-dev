@@ -1,5 +1,7 @@
 package aephyr.adapters.db
 
+import scala.language.unsafeNulls
+
 import javax.sql.DataSource
 
 import zio._
