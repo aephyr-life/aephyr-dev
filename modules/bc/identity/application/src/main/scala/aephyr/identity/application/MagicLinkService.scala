@@ -6,7 +6,7 @@ import zio.{ IO, Trace, UIO }
 
 trait MagicLinkService:
 
-  def sendMagicLink(reqEmail: User.EmailAddress, clientIp: String, ua: String)(
+  def sendMagicLink(reqEmail: User.EmailAddress, clientIp: Option[String], ua: Option[String])(
     using Trace
   ): UIO[Unit]
 

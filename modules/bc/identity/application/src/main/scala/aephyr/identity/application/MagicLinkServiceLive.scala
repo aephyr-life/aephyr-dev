@@ -46,8 +46,8 @@ final case class MagicLinkServiceLive(
    */
   override def sendMagicLink(
     reqEmail: User.EmailAddress,
-    clientIp: String,
-    ua: String
+    clientIp: Option[String],
+    ua: Option[String]
   )(using Trace): UIO[Unit] = {
     val emailNorm = reqEmail.normalized
     (for

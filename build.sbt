@@ -93,7 +93,18 @@ lazy val identityDomain = mod("bc/identity/domain", "identity-domain")
 
 lazy val identityApplication =
   mod("bc/identity/application", "identity-application")
-    .dependsOn(identityDomain, sharedApplication)
+    .dependsOn(identityDomain, identityPorts, sharedApplication)
+    .settings(
+      libraryDependencies ++= Seq(
+        Libs.zio,
+        Libs.zioLogging,
+        Libs.zioStacktracer
+      )
+    )
+
+lazy val identityPorts =
+  mod("bc/identity/ports", "identity-ports")
+    .dependsOn(identityDomain)
     .settings(
       libraryDependencies ++= Seq(
         Libs.zio,
@@ -135,7 +146,7 @@ lazy val adaptersImport = mod("adapters/import", "adapters-import")
   .dependsOn(sharedKernel)
 
 lazy val adaptersSecurity = mod("adapters/security", "adapters-security")
-  .dependsOn(sharedApplication, sharedKernel)
+  .dependsOn(sharedApplication, sharedKernel, identityPorts)
   .settings(
     libraryDependencies ++= prod(
       Libs.zio
@@ -212,7 +223,7 @@ lazy val webServer = mod("web/server", "web-server")
       Libs.logback,
       Libs.logbackEncoder
     ),
-    Compile / mainClass := Some("aephyr.adapters.api.server.ApiServerMain")
+    Compile / mainClass := Some("aephyr.web.server.WebServerMain")
   )
 
 lazy val dbMigrations = mod("db-migrations", "db-migrations")

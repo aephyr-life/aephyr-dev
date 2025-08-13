@@ -8,17 +8,23 @@
 package aephyr.web.server.routes.browser
 
 import scala.language.unsafeNulls
-
+import aephyr.web.server.routes.browser.identity.handler.*
 import aephyr.identity.application.MagicLinkService
+import aephyr.identity.application.ports.SessionService
+import aephyr.web.server.security.SessionCookie
 import aephyr.identity.domain.auth.AuthError
-import aephyr.shared.config.{ BaseUrl, MagicLinkCfg }
+import aephyr.shared.config.{BaseUrl, MagicLinkCfg}
 import aephyr.shared.security.SecureRandom
-import zio._
-import zio.http._
+import zio.*
+import zio.http.*
 import zio.http.codec.PathCodec
+
+import java.time.ZonedDateTime
+import java.time.ZoneId
 
 object IdentityBrowserRoutes:
 
+  // TODO move to SessionCookie
   def cookieResponse(sid: String, cfg: MagicLinkCfg): Cookie.Response =
     Cookie.Response(
       name = cfg.cookie.name,
@@ -35,35 +41,16 @@ object IdentityBrowserRoutes:
       maxAge = cfg.cookie.maxAgeSec.map(Duration.fromSeconds(_))
     )
 
-  def routes: Routes[MagicLinkService & MagicLinkCfg & SecureRandom, Nothing] =
+  def routes: Routes[SessionService & MagicLinkService & MagicLinkCfg & SecureRandom, Nothing] =
     Routes(
-      Method.GET / "web" / "auth" / "link" / PathCodec.string("token") ->
-        handler {
-          (token: String, _: Request) =>
-            val Z = ZIO
-            (for {
-              cfg <- Z.service[MagicLinkCfg]
-              _ <- Z
-                .serviceWithZIO[MagicLinkService](_.consumeMagicLink(token))
-                .mapError {
-                  case AuthError.InvalidToken => new Exception("invalid")
-                  case AuthError.DisabledUser => new Exception("disabled")
-                  case AuthError.Internal(e)  => e
-                }
-              sid <- Z.serviceWithZIO[SecureRandom](_.nextBytesAsBase64(32))
-            } yield Response
-              .redirect(toURL(cfg.redirects.successUrl), false)
-              .addCookie(cookieResponse(sid, cfg))).catchAll {
-              _ =>
-                Z.serviceWith[MagicLinkCfg](
-                  c => toURL(c.redirects.errorUrl)
-                ).map(
-                  url => Response.redirect(url, false)
-                )
-            }
-        }
+      Method.GET  / "web" / "auth" / "login" -> LoginFormHandler(),
+      Method.POST / "web" / "auth" / "magic" / "request" -> RequestMagicLinkHandler(),
+      Method.GET  / "web" / "auth" / "magic" / "check" -> CheckYourMailHandler(),
+      Method.GET  / "web" / "auth" / "magic" / "land"  -> GetToPostHandler(),
+      Method.POST / "web" / "auth" / "magic" / "redeem" -> RedeemTokenHandler(),
+      Method.GET  / "web" / "auth" / "magic" / "invalid" -> InvalidHandler(),
+//      Method.POST / "web" / "auth" / "logout" -> LogoutHandler(),
     )
 
   private def toURL(u: BaseUrl): URL =
-    // .get is safe here, BaseUrl already checks URLs
     URL.decode(u.value).toOption.get
