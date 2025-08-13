@@ -2,8 +2,8 @@ package aephyr.web.server.routes.browser.identity.handler
 
 import zio.*
 import zio.http.*
-
 import aephyr.web.server.security.SessionCookie
+import aephyr.web.server.util.Html
 
 object LoginFormHandler {
   def apply(): Handler[Any, Nothing, Any, Response] = handler {
@@ -15,7 +15,7 @@ object LoginFormHandler {
         |  <button type="submit">Send magic link</button>
         |</form>
         |""".stripMargin
-    ZIO.succeed(Response.text(html).updateHeaders(_ ++ SessionCookie.securityHeaders))
+    ZIO.succeed(Html(html).updateHeaders(_ ++ SessionCookie.securityHeaders))
     }
   }
 

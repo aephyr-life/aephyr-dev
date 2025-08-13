@@ -1,6 +1,7 @@
 package aephyr.web.server.routes.browser.identity.handler
 
 import aephyr.web.server.security.SessionCookie
+import aephyr.web.server.util.Html
 import zio.ZIO
 import zio.http.*
 
@@ -12,6 +13,6 @@ object CheckYourMailHandler {
         |<p>If an account exists for that address, we sent a sign-in link. It expires soon.</p>
         |<p><a href="/web/auth/login">Back</a></p>
         |""".stripMargin
-    ZIO.succeed(Response.text(html).updateHeaders(_ ++ SessionCookie.securityHeaders))
+    ZIO.succeed(Html(html).updateHeaders(_ ++ SessionCookie.securityHeaders))
   }
 }

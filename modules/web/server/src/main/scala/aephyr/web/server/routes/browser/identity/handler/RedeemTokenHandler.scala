@@ -56,7 +56,7 @@ object RedeemTokenHandler {
       .updateHeaders(_ ++ SessionCookie.securityHeaders)
       ).catchAll { _ =>
       Z.serviceWith[MagicLinkCfg](c => toURL(c.redirects.errorUrl))
-        .map(url => Response.redirect(url, false).updateHeaders(_ ++ SessionCookie.securityHeaders))
+        .map(url => Response.seeOther(url).updateHeaders(_ ++ SessionCookie.securityHeaders))
     }
   }
 }

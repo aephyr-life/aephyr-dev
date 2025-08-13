@@ -23,11 +23,11 @@ object RequestMagicLinkHandler {
           EmailAddress(email), None, None
         )).ignore // TODO rename send -> request
         // Always redirect to check page (no account enumeration)
-      } yield Response.redirect(URL.decode("/web/auth/magic/check").toOption.get, false)
+      } yield Response.seeOther(URL.decode("/web/auth/magic/check").toOption.get)
         .updateHeaders(_ ++ SessionCookie.securityHeaders)
         ).catchAll { _ =>
         // On malformed submission, send back to login
-        Z.succeed(Response.redirect(URL.decode("/web/auth/login").toOption.get, false)
+        Z.succeed(Response.seeOther(URL.decode("/web/auth/login").toOption.get)
           .updateHeaders(_ ++ SessionCookie.securityHeaders))
       }
     }

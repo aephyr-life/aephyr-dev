@@ -1,5 +1,6 @@
 package aephyr.web.server.routes.browser.identity.handler
 import aephyr.web.server.security.SessionCookie
+import aephyr.web.server.util.Html
 import zio.ZIO
 import zio.http.*
 object InvalidHandler {
@@ -10,6 +11,6 @@ object InvalidHandler {
                     |<p>It may have expired or was already used. Request a new one.</p>
                     |<p><a href="/web/auth/login">Back to login</a></p>
                     |""".stripMargin
-                ZIO.succeed(Response.text(html).updateHeaders(_ ++ SessionCookie.securityHeaders))
+                ZIO.succeed(Html(html).updateHeaders(_ ++ SessionCookie.securityHeaders))
               }
 }
