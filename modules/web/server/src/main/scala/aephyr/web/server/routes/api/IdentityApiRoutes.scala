@@ -38,8 +38,8 @@ object IdentityApiRoutes {
             svc =>
               svc.sendMagicLink(
                 req.email,
-                "192.168.1.1",
-                "ua"
+                None,
+                None
               ) // TODO ip und ua
           }
           .as(

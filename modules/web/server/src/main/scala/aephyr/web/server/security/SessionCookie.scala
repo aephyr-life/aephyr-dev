@@ -2,9 +2,26 @@ package aephyr.web.server.security
 
 import aephyr.identity.application.ports.SessionId
 import aephyr.shared.config.MagicLinkCfg
-import zio.http._
+import zio.http.*
+
+import java.time.{ZoneId, ZonedDateTime}
 
 object SessionCookie {
+
+  private val epoch = ZonedDateTime.ofInstant(java.time.Instant.EPOCH, ZoneId.of("UTC")).nn
+
+  val securityHeaders: Headers =
+    Headers(
+      Header.CacheControl.NoStore,
+      Header.Pragma.NoCache,
+      Header.Expires(epoch),
+      Header.Custom("Referrer-Policy", "no-referrer"),
+      Header.Custom("X-Content-Type-Options", "nosniff"),
+      Header.Custom(
+        "Content-Security-Policy",
+        "default-src 'none'; base-uri 'none'; form-action 'self'"
+      )
+    )
 
   /** Build a secure cookie for the given session id, using settings from MagicLinkCfg. */
   def make(id: SessionId, cfg: MagicLinkCfg): Cookie.Response =

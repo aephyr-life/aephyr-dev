@@ -18,15 +18,39 @@ import aephyr.adapters.db.{DataSourceLayer, TokenStoreLive, UserReadRepository, 
 import aephyr.adapters.messaging.EmailSenderLive
 import aephyr.adapters.security.SecureRandomLive
 import aephyr.adapters.security.session.InMemorySessionService
+import aephyr.identity.api.command.IdentityCommandEndpoints
 import aephyr.identity.application.ports.TokenStore
 import aephyr.identity.application.{MagicLinkService, MagicLinkServiceLive}
 import aephyr.shared.config.{AppConfig, MagicLinkCfg}
 import aephyr.web.server.routes.api.ApiRoutes
+import aephyr.web.server.routes.browser.IdentityBrowserRoutes
+import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zio.http.*
 import zio.logging.backend.SLF4J
 import zio.{Clock, *}
 
 object WebServerMain extends ZIOAppDefault:
+
+//  private val tapirHttp = {
+//    val cmd = IdentityCommandEndpoints.all // TODO maybe rename to Api?
+//    val qry = IdentityQueryEndpoints.all
+//
+//    val cmdHttp = ZioHttpInterpreter().toHttp(cmd)
+//    val qryHttp = ZioHttpInterpreter().toHttp(qry)
+//
+//    cmdHttp <+> qryHttp
+//  }
+
+  private val browserHttp =
+    (IdentityBrowserRoutes.routes
+      // ++ ProtectedRoutes.routes
+      )
+
+  private val app = (browserHttp ++ ApiRoutes.routes)
+
+  /*
+  mapError(_ => Response.status(Status.InternalServerError)) @@ Middleware.debug
+  */
 
   override val bootstrap: ULayer[Unit] =
     Runtime.removeDefaultLoggers >>> SLF4J.slf4j
@@ -36,7 +60,7 @@ object WebServerMain extends ZIOAppDefault:
       for {
         _ <- ZIO.addFinalizer(ZIO.logInfo("🛑 Shutting down server..."))
         _ <- Server
-          .serve(ApiRoutes.routes)
+          .serve(app)
           .provide(
             Server.defaultWithPort(8080), // TODO get Port from config
             MagicLinkServiceLive.layer,
