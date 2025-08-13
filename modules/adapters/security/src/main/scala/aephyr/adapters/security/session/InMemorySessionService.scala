@@ -1,15 +1,13 @@
 package aephyr.adapters.security.session
 
-import aephyr.identity.application.ports.{
-  Session,
-  SessionId,
-  SessionService,
-  UserId
-}
+import aephyr.identity.application.ports.{Session, SessionId, SessionService}
 import aephyr.shared.config.MagicLinkCfg
 import aephyr.shared.security.SecureRandom
-import zio._
+import aephyr.identity.domain.User
+import zio.*
+
 import java.time.Instant
+import javax.sql.DataSource
 
 final class InMemorySessionService(
                                     ref: Ref[Map[SessionId, Session]],
@@ -20,7 +18,7 @@ final class InMemorySessionService(
 
   private val ttlSec: Long = cfg.cookie.maxAgeSec.getOrElse(12 * 60 * 60).toLong
 
-  def create(userId: UserId): UIO[Session] =
+  def create(userId: User.Id): UIO[Session] =
     for {
       now <- clock.instant
       raw <- rnd.nextBytesAsBase64(32)
@@ -49,7 +47,7 @@ final class InMemorySessionService(
 }
 
 object InMemorySessionService {
-  val layer: ZLayer[MagicLinkCfg & SecureRandom & Clock, Nothing, SessionService] =
+  val live: ZLayer[MagicLinkCfg & SecureRandom & Clock, Nothing, SessionService] =
     ZLayer.fromZIO {
       for {
         ref <- Ref.make(Map.empty[SessionId, Session])
@@ -65,4 +63,3 @@ object InMemorySessionService {
       } yield svc
     }
 }
-

@@ -14,23 +14,17 @@
 
 package aephyr.web.server
 
-import aephyr.adapters.db.{
-  DataSourceLayer,
-  TokenStoreLive,
-  UserReadRepository,
-  UserWriteRepository
-}
+import aephyr.adapters.db.{DataSourceLayer, TokenStoreLive, UserReadRepository, UserWriteRepository}
 import aephyr.adapters.messaging.EmailSenderLive
 import aephyr.adapters.security.SecureRandomLive
+import aephyr.adapters.security.session.InMemorySessionService
 import aephyr.identity.application.ports.TokenStore
-import aephyr.identity.application.{ MagicLinkService, MagicLinkServiceLive }
-import aephyr.shared.config.{ AppConfig, MagicLinkCfg }
-
+import aephyr.identity.application.{MagicLinkService, MagicLinkServiceLive}
+import aephyr.shared.config.{AppConfig, MagicLinkCfg}
 import aephyr.web.server.routes.api.ApiRoutes
-
-import zio.http._
+import zio.http.*
 import zio.logging.backend.SLF4J
-import zio.{ Clock, _ }
+import zio.{Clock, *}
 
 object WebServerMain extends ZIOAppDefault:
 
@@ -57,6 +51,7 @@ object WebServerMain extends ZIOAppDefault:
             SecureRandomLive.layer,
             ZLayer.succeed(Clock.ClockLive),
             DataSourceLayer.live,
+            InMemorySessionService.live,
             ZLayer.fromZIO {
               for {
                 cfg <- ZIO.service[MagicLinkCfg]
