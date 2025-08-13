@@ -146,7 +146,7 @@ lazy val adaptersImport = mod("adapters/import", "adapters-import")
   .dependsOn(sharedKernel)
 
 lazy val adaptersSecurity = mod("adapters/security", "adapters-security")
-  .dependsOn(sharedApplication, sharedKernel)
+  .dependsOn(sharedApplication, sharedKernel, identityPorts)
   .settings(
     libraryDependencies ++= prod(
       Libs.zio
