@@ -16,6 +16,7 @@
           pkgs.git 
           pkgs.just 
           pkgs.direnv
+          pkgs.jq
         ];
       in {
         devShells = {
@@ -28,7 +29,7 @@
           # Server shell: adjust to your stack
           server = pkgs.mkShell {
             packages = commonTools ++ [
-              pkgs.jdk21 
+              pkgs.jdk21
               pkgs.sbt
               pkgs.postgresql_16
             ];
@@ -48,12 +49,17 @@
 
           # Client shell: pick iOS or web
           client = pkgs.mkShell {
-            packages = with pkgs; commonTools ++ [
-              # For iOS: Xcode isn’t in Nix; keep fastlane/cocoapods if you use them:
-              ruby_3_3 bundler
-              # fastlane cocoapods # (if you vendor or use nix overlays)
+            packages = commonTools ++ [
+              pkgs.ruby_3_3 
+              pkgs.bundler
+              pkgs.gradle
+              pkgs.jdk17
             ];
-            shellHook = ''echo "[aephyr] client shell";'';
+            shellHook = ''
+              echo "[aephyr] client shell";
+              export JAVA_HOME="${pkgs.jdk17}"
+              export GRADLE_USER_HOME="$PWD/.gradle"
+            '';
           };
         };
       });

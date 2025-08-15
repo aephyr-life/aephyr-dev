@@ -1,47 +1,25 @@
 .env
 .pg/
 
+# direnv / nix
+.direnv/
+result*/
+.devenv/
+
 # sbt build output
 target/
 project/target/
 project/project/
 
-# nix build output
-result
+# gradle
+.gradle/
+build/
+out/
 
-# Xcode / Swift / iOS
-client/ios/AephyrApp.xcodeproj/project.xcworkspace/
-client/ios/AephyrApp.xcworkspace/
-client/ios/DerivedData/
-client/ios/Build/
-client/ios/*.xcuserstate
-client/ios/*.xcuserdata/
-client/ios/*.moved-aside
-client/ios/*.hmap
-client/ios/*.ipa
-client/ios/*.dSYM.zip
-client/ios/*.dSYM
-
-# Android / Gradle
-client/android/.gradle/
-client/android/local.properties
-client/android/.idea/
-client/android/build/
-client/android/captures/
-client/android/**/*.iml
-client/android/app/build/
-client/android/app/release/
-
-# Shared (z. B. Flutter/React Native Artifacts, falls später)
-client/node_modules/
-client/.expo/
-client/dist/
-client/build/
-client/.flutter-plugins
-client/.flutter-plugins-dependencies
-client/.dart_tool/
-
-# DevShell / Nix
-client/nix/.direnv/
-client/nix/result
+# Xcode / iOS
+*.xcworkspace/        # ignore whole workspace directories
+**/*.xcworkspace/*
+*.xcuserdatad/
+*.xcuserstate
+DerivedData/
 
