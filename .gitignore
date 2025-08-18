@@ -1,10 +1,25 @@
 .env
 .pg/
 
+# direnv / nix
+.direnv/
+result*/
+.devenv/
+
 # sbt build output
 target/
 project/target/
 project/project/
 
-# nix build output
-result
+# gradle
+.gradle/
+build/
+out/
+
+# Xcode / iOS
+*.xcworkspace/        # ignore whole workspace directories
+**/*.xcworkspace/*
+*.xcuserdatad/
+*.xcuserstate
+DerivedData/
+
