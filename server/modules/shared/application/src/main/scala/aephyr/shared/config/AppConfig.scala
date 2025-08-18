@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 
 package aephyr.shared.config
-
+import java.time.Duration
 import zio.*
 import zio.config.ConfigOps
 import zio.config.magnolia.*
@@ -19,9 +19,13 @@ final case class HttpCfg(host: String, port: Int)
 final case class DbPoolCfg(maxSize: Int, queueSize: Int)
 final case class DbCfg(url: String, user: String, password: String, pool: DbPoolCfg)
 
-final case class SmtpCfg(host: String, port: Int, startTls: Boolean)
+final case class AuthCfg(webauthn: WebAuthnCfg)
 
-final case class AuthCfg()
+final case class WebAuthnCfg(
+                              rpId: String,
+                              rpName: String,
+                              origins: Set[String],
+                              txTtl: Duration)
 
 final case class LoggingCfg(format: String, level: String)
 
@@ -54,10 +58,8 @@ object AppConfig:
 
   val layerWithEnvVars: ZLayer[Any, Throwable, AppConfig] = {
     ZLayer.fromZIO {
-      val fileProvider = TypesafeConfigProvider.fromResourcePath()
-      val envProvider  = ConfigProvider.fromEnv("_", ",")
-      envProvider
-        .orElse(fileProvider)
+      TypesafeConfigProvider
+        .fromResourcePath()
         .load(desc)
         .mapError(e => new RuntimeException(e.toString))
     }
