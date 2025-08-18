@@ -21,7 +21,7 @@ final case class DbCfg(url: String, user: String, password: String, pool: DbPool
 
 final case class SmtpCfg(host: String, port: Int, startTls: Boolean)
 
-final case class AuthCfg(magicLink: MagicLinkCfg)
+final case class AuthCfg()
 
 final case class LoggingCfg(format: String, level: String)
 
@@ -33,8 +33,6 @@ final case class AppConfig(
                           )
 
 object AppConfig:
-
-  import MagicLinkCfg.given
 
   given Config[BaseUrl] = {
     Config.string
@@ -77,9 +75,3 @@ object AppConfig:
 
   val logging: ZLayer[AppConfig, Nothing, LoggingCfg] =
     ZLayer.fromFunction((c: AppConfig) => c.logging)
-
-  val magicLink: ZLayer[AppConfig, Nothing, MagicLinkCfg] =
-    ZLayer.fromFunction((c: AppConfig) => c.auth.magicLink)
-
-  val magicLinkIssuance: ZLayer[AppConfig, Nothing, MagicLinkIssuance] =
-    ZLayer.fromFunction((c: AppConfig) => c.auth.magicLink.issuance)

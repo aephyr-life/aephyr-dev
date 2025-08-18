@@ -14,16 +14,13 @@
 
 package aephyr.web.server
 
-import aephyr.adapters.db.{DataSourceLayer, TokenStoreLive, UserReadRepository, UserWriteRepository}
-import aephyr.adapters.messaging.EmailSenderLive
+import aephyr.adapters.db.{DataSourceLayer, UserReadRepository, UserWriteRepository}
+
 import aephyr.adapters.security.SecureRandomLive
-import aephyr.adapters.security.session.InMemorySessionService
 import aephyr.identity.api.command.IdentityCommandEndpoints
 import aephyr.identity.application.ports.TokenStore
-import aephyr.identity.application.{MagicLinkService, MagicLinkServiceLive}
-import aephyr.shared.config.{AppConfig, MagicLinkCfg}
+import aephyr.shared.config.AppConfig
 import aephyr.web.server.routes.api.ApiRoutes
-import aephyr.web.server.routes.browser.IdentityBrowserRoutes
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zio.http.*
 import zio.logging.backend.SLF4J
@@ -41,12 +38,9 @@ object WebServerMain extends ZIOAppDefault:
 //    cmdHttp <+> qryHttp
 //  }
 
-  private val browserHttp =
-    (IdentityBrowserRoutes.routes
-      // ++ ProtectedRoutes.routes
-      )
 
-  private val app = (browserHttp ++ ApiRoutes.routes)
+
+  private val app = (ApiRoutes.routes)
 
   /*
   mapError(_ => Response.status(Status.InternalServerError)) @@ Middleware.debug
@@ -63,25 +57,13 @@ object WebServerMain extends ZIOAppDefault:
           .serve(app)
           .provide(
             Server.defaultWithPort(8080), // TODO get Port from config
-            MagicLinkServiceLive.layer,
-            TokenStoreLive.layer,
-            EmailSenderLive.layer,
             UserReadRepository.layer,
             UserWriteRepository.layer,
             AppConfig.layer,
             AppConfig.db,
-            AppConfig.magicLink,
-            AppConfig.magicLinkIssuance,
             SecureRandomLive.layer,
             ZLayer.succeed(Clock.ClockLive),
             DataSourceLayer.live,
-            InMemorySessionService.live,
-            ZLayer.fromZIO {
-              for {
-                cfg <- ZIO.service[MagicLinkCfg]
-                lb = new LinkBuilder(cfg.links.apiBaseUrl)
-              } yield (token: String) => lb.magicLink(token)
-            }
           )
           .onInterrupt(ZIO.logInfo("📥 Interrupt received, stopping..."))
       } yield ()

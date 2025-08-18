@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 
 package aephyr.web.server.routes.api
-import aephyr.identity.application.MagicLinkService
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir._
 import zio._
@@ -14,9 +13,9 @@ import zio.http._
 
 object ApiRoutes:
 
-  type Env = MagicLinkService
+  type Env = Any
 
-  private val apiEndpoints: List[ZServerEndpoint[MagicLinkService, Any]] =
+  private val apiEndpoints: List[ZServerEndpoint[Env, Any]] =
     IdentityApiRoutes.all
 
   // Your business routes built from server endpoints

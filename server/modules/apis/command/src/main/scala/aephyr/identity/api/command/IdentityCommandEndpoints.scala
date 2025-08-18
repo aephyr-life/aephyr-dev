@@ -5,5 +5,5 @@ import sttp.tapir.Endpoint
 object IdentityCommandEndpoints:
   val all: List[Endpoint[?, ?, ?, ?, ?]] =
     List(
-      MagicLinkCommandEndpoints.requestMagicLink
+
     )

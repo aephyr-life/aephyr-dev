@@ -10,47 +10,11 @@ package aephyr.web.server.routes.api
 import aephyr.api.ErrorMappings
 import aephyr.identity.api.command._
 import aephyr.identity.api.query._
-import aephyr.identity.application.MagicLinkService
 import sttp.tapir.ztapir._
 import zio._
 
 object IdentityApiRoutes {
 
-  private val redeemMagicLinkToken: ZServerEndpoint[MagicLinkService, Any] =
-    MagicLinkQueryEndpoints.redeemMagicLink.zServerLogic[MagicLinkService] {
-      req =>
-        ZIO
-          .serviceWithZIO[MagicLinkService](_.consumeMagicLink(req))
-          .mapError(ErrorMappings.fromAuth)
-          .as(
-            MagicLinkConsumptionResponse(
-              "If an account exists for this email, " +
-                "a sign-in link has been sent."
-            )
-          )
-    }
-
-  val requestMagicLinkToken: ZServerEndpoint[MagicLinkService, Any] =
-    MagicLinkCommandEndpoints.requestMagicLink.zServerLogic[MagicLinkService] {
-      req =>
-        ZIO
-          .serviceWithZIO[MagicLinkService] {
-            svc =>
-              svc.sendMagicLink(
-                req.email,
-                None,
-                None
-              ) // TODO ip und ua
-          }
-          .as(
-            MagicLinkCreationResponse(
-              "If the email exists, a magic link has been sent."
-            )
-          )
-    }
-
   val all = List(
-    requestMagicLinkToken,
-    redeemMagicLinkToken
   )
 }
