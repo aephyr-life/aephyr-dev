@@ -67,42 +67,42 @@ dev-env:
 # builds the program
 [group('dev')]
 build:
-  sbt compile
+  sbtn compile
 
 # cleans the build
 [group('dev')]
 clean:
-  sbt clean
+  sbtn clean
 
 # runs the tests
 [group('dev')]
 test:
-  sbt test
+  sbtn test
 
 # starts the web server
 [group('dev')]
 run:
-  sbt web-server/run
+  sbtn web-server/run
 
 # opens a repl
 [group('dev')]
 repl:
-  sbt console
+  sbtn console
 
 # migrates the db
 [group('dev')]
 migrate:
-  sbt db-migrations/run
+  sbtn db-migrations/run
 
 # formats the code
 [group('dev')]
 fmt:
-  sbt "scalafmtAll; scalafmtSbt; scalafixAll"
+  sbtn "scalafmtAll; scalafmtSbt; scalafixAll"
 
 # lints the code
 [group('dev')]
 lint:
-    sbt "scalafmtCheckAll; scalafixAll --check"
+    sbtn "scalafmtCheckAll; scalafixAll --check"
 
 # updates flake.lock
 [group('dev')]

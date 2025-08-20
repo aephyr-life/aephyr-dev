@@ -6,17 +6,19 @@
 //------------------------------------------------------------------------------
 
 package aephyr.web.server.routes.api
+import aephyr.auth.ports.{ChallengeStore, UserHandleRepo, WebAuthnRepo}
+import com.yubico.webauthn.RelyingParty
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import sttp.tapir.ztapir._
-import zio._
-import zio.http._
+import sttp.tapir.ztapir.*
+import zio.*
+import zio.http.*
 
 object ApiRoutes:
 
-  type Env = Any
+  type Env = RelyingParty & ChallengeStore & UserHandleRepo & WebAuthnRepo
 
   private val apiEndpoints: List[ZServerEndpoint[Env, Any]] =
-    IdentityApiRoutes.all
+    IdentityApiEndpoints.endpoints
 
   // Your business routes built from server endpoints
   private val apiRoutes: Routes[Env, Response] =
@@ -37,4 +39,4 @@ object ApiRoutes:
 
   // Final combined router
   val routes: Routes[Env, Response] =
-    apiRoutes ++ docsRoutes
+    apiRoutes ++ docsRoutes ++ WebAuthnTestRoutes.routes

@@ -15,7 +15,10 @@
 package aephyr.web.server
 
 import aephyr.adapters.db.{DataSourceLayer, UserReadRepository, UserWriteRepository}
-
+import aephyr.adapters.security.webauthn.memory.InMemoryChallengeStore
+import aephyr.adapters.security.webauthn.memory.InMemoryRelyingParty
+import aephyr.adapters.security.webauthn.memory.InMemoryUserHandleRepo
+import aephyr.adapters.security.webauthn.memory.InMemoryWebAuthnRepo
 import aephyr.adapters.security.SecureRandomLive
 import aephyr.identity.api.command.IdentityCommandEndpoints
 import aephyr.identity.application.ports.TokenStore
@@ -59,6 +62,10 @@ object WebServerMain extends ZIOAppDefault:
             Server.defaultWithPort(8080), // TODO get Port from config
             UserReadRepository.layer,
             UserWriteRepository.layer,
+            InMemoryRelyingParty.live,
+            InMemoryChallengeStore.live(),
+            InMemoryUserHandleRepo.live,
+            InMemoryWebAuthnRepo.live,
             AppConfig.layer,
             AppConfig.db,
             SecureRandomLive.layer,

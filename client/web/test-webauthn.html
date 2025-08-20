@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>WebAuthn Test – Registration</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px; max-width: 800px; }
+    label { display:block; margin-top:12px; font-weight:600; }
+    input { width: 100%; padding: 8px; margin-top:6px; }
+    button { margin-top:16px; padding:10px 14px; cursor:pointer; }
+    pre { background:#111; color:#0f0; padding:12px; border-radius:8px; white-space:pre-wrap; max-height: 300px; overflow:auto; }
+  </style>
+</head>
+<body>
+  <h1>WebAuthn Registration Test</h1>
+
+  <label>User ID (UUID)</label>
+  <input id="userId" value="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"/>
+
+  <label>Username</label>
+  <input id="username" value="alice@example.com"/>
+
+  <label>Display name</label>
+  <input id="displayName" value="Alice"/>
+
+  <button id="btnRegister">➡️ Begin + Finish registration</button>
+
+  <h3>Log</h3>
+  <pre id="log"></pre>
+
+<script>
+const API_BASE = "http://localhost:8080/api/webauthn";
+
+const $ = (id) => document.getElementById(id);
+const logEl = $("log");
+function log(title, obj) {
+  if (obj !== undefined) {
+    logEl.textContent += title + " " + JSON.stringify(obj, null, 2) + "\n";
+  } else {
+    logEl.textContent += title + "\n";
+  }
+}
+
+async function api(path, body) {
+  const r = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : null
+  });
+  const text = await r.text(); // capture error bodies too
+  if (!r.ok) {
+    // show server’s error payload if any
+    throw new Error(text || `${r.status} ${r.statusText}`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    // if server returned plain text
+    return text;
+  }
+}
+
+function b64urlToUint8Array(b64url) {
+  if (typeof b64url !== "string") {
+    throw new Error(`Expected base64url string but got: ${typeof b64url}`);
+  }
+  const padded = b64url.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((b64url.length + 3) % 4);
+  const raw = atob(padded);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+function bufToB64url(buf) {
+  const bytes = new Uint8Array(buf);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function reviveCreationOptions(maybePk) {
+  // Accept either: { publicKey: {...} } or already the inner {...}
+  let pk = maybePk;
+  if (pk && typeof pk === "object" && pk.publicKey && !pk.publicKey.rp) {
+    // case: { publicKey: "<json-string>" }  (older server)
+    try {
+      const parsed = JSON.parse(pk.publicKey);
+      pk = parsed.publicKey || parsed; // handle nested { publicKey: {...} }
+    } catch (e) {
+      throw new Error("publicKey string was not valid JSON");
+    }
+  } else if (typeof pk === "string") {
+    // case: server gave the whole thing as a string
+    const parsed = JSON.parse(pk);
+    pk = parsed.publicKey || parsed;
+  } else if (pk && pk.publicKey && pk.publicKey.rp) {
+    // case: { publicKey: { rp, user, ... } }
+    pk = pk.publicKey;
+  }
+
+  if (!pk || !pk.rp || !pk.user || !pk.challenge) {
+    throw new Error("publicKey options missing required fields");
+  }
+
+  // Convert binary fields
+  pk.challenge = b64urlToUint8Array(pk.challenge);
+  pk.user.id   = b64urlToUint8Array(pk.user.id);
+
+  // Map any excludeCredentials[].id
+  if (Array.isArray(pk.excludeCredentials)) {
+    pk.excludeCredentials = pk.excludeCredentials.map(cred => ({
+      ...cred,
+      id: typeof cred.id === "string" ? b64urlToUint8Array(cred.id) : cred.id
+    }));
+  }
+  return pk;
+}
+
+function credentialToJSON(cred) {
+  // Convert buffers to base64url for server library
+  const out = {
+    id: cred.id,
+    rawId: bufToB64url(cred.rawId),
+    type: cred.type,
+    response: {},
+    clientExtensionResults: cred.getClientExtensionResults ? cred.getClientExtensionResults() : {},
+    authenticatorAttachment: cred.authenticatorAttachment
+  };
+
+  if (cred.response) {
+    if (cred.response.attestationObject) {
+      out.response.attestationObject = bufToB64url(cred.response.attestationObject);
+    }
+    if (cred.response.clientDataJSON) {
+      out.response.clientDataJSON = bufToB64url(cred.response.clientDataJSON);
+    }
+    // (during registration, the other fields aren’t present)
+  }
+  return out;
+}
+
+$("btnRegister").addEventListener("click", async () => {
+  logEl.textContent = ""; // clear
+  try {
+    const userId = $("userId").value.trim();
+    const username = $("username").value.trim();
+    const displayName = $("displayName").value.trim();
+
+    log("➡️ Begin registration");
+    log("➡️ Fetching registration options...");
+
+    // IMPORTANT: your server expects a POST body with userId/username/displayName
+    const begin = await api("/registration/options", { userId, username, displayName });
+    log("Begin response:", begin);
+
+    // begin has { publicKey: <object or string>, tx: <string> }
+    const tx = begin.tx;
+    const publicKey = reviveCreationOptions(begin.publicKey);
+    log("Normalized publicKey options:", publicKey);
+
+    log("Creating credential...");
+    const cred = await navigator.credentials.create({ publicKey });
+    const att = credentialToJSON(cred);
+    log("Attestation payload (client → server):", att);
+
+    // Server expects: { tx, responseJson, label? }
+    const finish = await api("/registration/verify", {
+      tx,
+      responseJson: JSON.stringify(att),
+      label: "My Key"
+    });
+    log("✅ Registration verified:", finish);
+
+  } catch (err) {
+    log("❌ Error:", { message: err.message, stack: err.stack });
+  }
+});
+</script>
+</body>
+</html>

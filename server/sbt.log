@@ -1,0 +1,22 @@
+[[0minfo[0m] entering *experimental* thin client - BEEP WHIRR
+[[0minfo[0m] terminate the server with `shutdown`
+> web-server/compile
+[info] compiling 1 Scala source to /Users/martin/Aephyr/aephyr-dev/server/modules/web/server/target/scala-3.3.6/classes ...[0J
+[0J[error] -- [E008] Not Found Error: /Users/martin/Aephyr/aephyr-dev/server/modules/web/server/src/main/scala/aephyr/web/server/routes/api/WebAuthnTestRoutes.scala:120:52 [0J
+[0J[error] 120 |          clientStr = unwrapPublicKeyJsonString(req.toCreadentialsCreateJson)[0J
+[0J[error]     |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0J
+[0J[error]     |value toCreadentialsCreateJson is not a member of com.yubico.webauthn.data.PublicKeyCredentialCreationOptions - did you mean req.toCredentialsCreateJson?[0J
+[0J[error] -- [E008] Not Found Error: /Users/martin/Aephyr/aephyr-dev/server/modules/web/server/src/main/scala/aephyr/web/server/routes/api/WebAuthnTestRoutes.scala:121:51 [0J
+[0J[error] 121 |          publicKeyAst <- ZIO.fromEither(clientStr.fromJson[Json]).mapError(_ => ())[0J
+[0J[error]     |                                         ^^^^^^^^^^^^^^^^^^[0J
+[0J[error]     |value fromJson is not a member of Any, but could be made available as an extension method.[0J
+[0J[error]     |[0J
+[0J[error]     |The following import might make progress towards fixing the problem:[0J
+[0J[error]     |[0J
+[0J[error]     |  import izumi.reflect.dottyreflection.ReflectionUtil.[0J
+[0J[error]     |  reflectiveUncheckedNonOverloadedSelectable[0J
+[0J[error]     |[0J
+[0J[error] two errors found[0J
+[0J[[31merror[0m] Total time: 7 s, completed Aug 20, 2025, 8:26:16 PM
+[error] (web-server / Compile / compileIncremental) Compilation failed[0J
+[0J[0J

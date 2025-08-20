@@ -69,6 +69,7 @@ object Dependencies {
     val tapirOpenApiDocs =
       "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % V.tapir
     val tapirZio = "com.softwaremill.sttp.tapir" %% "tapir-zio" % V.tapir
+    val tapirJsonZio = "com.softwaremill.sttp.tapir" %% "tapir-json-zio" % V.tapir // TODO remove?
     val tapirZioHttp =
       "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % V.tapir
 

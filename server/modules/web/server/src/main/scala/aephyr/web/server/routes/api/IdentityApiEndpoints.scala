@@ -13,8 +13,8 @@ import aephyr.identity.api.query._
 import sttp.tapir.ztapir._
 import zio._
 
-object IdentityApiRoutes {
+object IdentityApiEndpoints {
 
-  val all = List(
+  val endpoints = List(
   )
 }
