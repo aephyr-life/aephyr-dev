@@ -11,6 +11,7 @@ final case class Credential(
                              credentialId: Array[Byte],   // raw credentialId (opaque)
                              publicKeyCose: Array[Byte],  // COSE-encoded public key
                              signCount: Long,
+                             userHandleBytes: Array[Byte],
                              uvRequired: Boolean,
                              transports: List[String],
                              label: Option[String],

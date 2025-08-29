@@ -1,12 +1,18 @@
 package aephyr.adapters.security.webauthn.memory
 
+import aephyr.auth.domain.UserHandle
+
 import scala.language.unsafeNulls
 import zio.*
+
 import scala.jdk.CollectionConverters.*
 import com.yubico.webauthn.*
 import com.yubico.webauthn.data.{ByteArray, PublicKeyCredentialDescriptor}
+
 import java.util.{Collections, Optional}
 import com.yubico.webauthn.data.*
+
+import aephyr.auth.domain.UserHandle
 import aephyr.auth.ports.WebAuthnRepo
 import aephyr.auth.ports.UserHandleRepo
 import aephyr.shared.config.AppConfig
@@ -22,6 +28,14 @@ object InMemoryRelyingParty {
       } yield {
         val credRepo = new CredentialRepository {
 
+          import java.util.{Collections, Optional}
+          import java.util.Base64
+
+          // Helper: base64url (optional for logging)
+          private def b64u(b: Array[Byte]) =
+            Base64.getUrlEncoder.withoutPadding().encodeToString(b)
+
+          // You don't need username-first; keep these empty.
           override def getCredentialIdsForUsername(username: String)
           : java.util.Set[PublicKeyCredentialDescriptor] =
             Collections.emptySet()
@@ -29,22 +43,37 @@ object InMemoryRelyingParty {
           override def getUserHandleForUsername(username: String): Optional[ByteArray] =
             Optional.empty()
 
-          override def getUsernameForUserHandle(userHandle: ByteArray): Optional[String] =
-            Optional.empty()
+          // IMPORTANT: return some stable "username" for a given userHandle.
+          // If you don't have display usernames, use userId.toString.
+          override def getUsernameForUserHandle(userHandle: ByteArray): Optional[String] = {
+            // Use your UserHandleRepo to resolve handle -> userId -> username/alias
+            val z = handles
+              .findByHandle(UserHandle(userHandle.getBytes))
+              .map {
+                case Some(uid) => Some(userRepo.usernameFor(uid).getOrElse(uid.toString))
+                case None      => None
+              }
+              .orElseSucceed(None)
 
-          // helper to run Task
-          private def runTask[A](zio: ZIO[Any, Throwable, A]): A =
-            Unsafe.unsafe { implicit u => rt.unsafe.run(zio).getOrThrowFiberFailure() }
+            val value =
+              Unsafe.unsafe { implicit u => rt.unsafe.run(z).getOrThrowFiberFailure() }
+            Optional.ofNullable(value.orNull)
+          }
 
+          // Helper to run Task already bound to concrete services
+          private def runTask[A](io: zio.Task[A]): A =
+            Unsafe.unsafe { implicit u => rt.unsafe.run(io).getOrThrowFiberFailure() }
+
+          // Called when authenticator supplies userHandle; we still ignore it and
+          // return what we have in DB (safer, canonical).
           override def lookup(credentialId: ByteArray, userHandle: ByteArray)
           : Optional[RegisteredCredential] = {
             val cOpt = runTask(creds.findByCredentialId(credentialId.getBytes))
-            val uh = new ByteArray(userHandle.getBytes)
             Optional.ofNullable(
               cOpt.map { c =>
                 RegisteredCredential.builder()
                   .credentialId(credentialId)
-                  .userHandle(uh)
+                  .userHandle(new ByteArray(c.userHandleBytes))
                   .publicKeyCose(new ByteArray(c.publicKeyCose))
                   .signatureCount(c.signCount.toInt)
                   .build()
@@ -52,20 +81,20 @@ object InMemoryRelyingParty {
             )
           }
 
+          // Called when authenticator omits userHandle (common case you’re seeing).
+          // MUST return a RegisteredCredential with the STORED userHandle bytes.
           override def lookupAll(credentialId: ByteArray): java.util.Set[RegisteredCredential] = {
             val cOpt = runTask(creds.findByCredentialId(credentialId.getBytes))
-            cOpt
-              .map { c =>
-                Collections.singleton(
-                  RegisteredCredential.builder()
-                    .credentialId(credentialId)
-                    .userHandle(new ByteArray(Array.emptyByteArray))
-                    .publicKeyCose(new ByteArray(c.publicKeyCose))
-                    .signatureCount(c.signCount.toInt)
-                    .build()
-                )
-              }
-              .getOrElse(Collections.emptySet())
+            cOpt.map { c =>
+              Collections.singleton(
+                RegisteredCredential.builder()
+                  .credentialId(credentialId)
+                  .userHandle(new ByteArray(c.userHandleBytes)) // <-- FIX: was empty array
+                  .publicKeyCose(new ByteArray(c.publicKeyCose))
+                  .signatureCount(c.signCount.toInt)
+                  .build()
+              )
+            }.getOrElse(Collections.emptySet())
           }
         }
 

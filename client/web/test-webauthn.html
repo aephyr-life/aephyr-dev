@@ -2,178 +2,148 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>WebAuthn Test – Registration</title>
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px; max-width: 800px; }
-    label { display:block; margin-top:12px; font-weight:600; }
-    input { width: 100%; padding: 8px; margin-top:6px; }
-    button { margin-top:16px; padding:10px 14px; cursor:pointer; }
-    pre { background:#111; color:#0f0; padding:12px; border-radius:8px; white-space:pre-wrap; max-height: 300px; overflow:auto; }
-  </style>
+  <title>WebAuthn Test Page</title>
 </head>
 <body>
-  <h1>WebAuthn Registration Test</h1>
+  <h1>WebAuthn Test</h1>
 
-  <label>User ID (UUID)</label>
-  <input id="userId" value="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"/>
+  <div>
+    <label>User ID (UUID): <input id="userId" size="40" value="00000000-0000-0000-0000-000000000001"></label><br>
+    <label>Username: <input id="username" value="martin"></label><br>
+    <label>Display name: <input id="displayName" value="Martin"></label><br>
+    <button onclick="beginRegistration()">Begin Registration</button>
+    <button onclick="beginAuthentication()">Begin Authentication</button>
+  </div>
 
-  <label>Username</label>
-  <input id="username" value="alice@example.com"/>
-
-  <label>Display name</label>
-  <input id="displayName" value="Alice"/>
-
-  <button id="btnRegister">➡️ Begin + Finish registration</button>
-
-  <h3>Log</h3>
   <pre id="log"></pre>
 
-<script>
-const API_BASE = "http://localhost:8080/api/webauthn";
+  <script>
+    const API_BASE = "http://localhost:8080/api/webauthn";
 
-const $ = (id) => document.getElementById(id);
-const logEl = $("log");
-function log(title, obj) {
-  if (obj !== undefined) {
-    logEl.textContent += title + " " + JSON.stringify(obj, null, 2) + "\n";
-  } else {
-    logEl.textContent += title + "\n";
-  }
-}
-
-async function api(path, body) {
-  const r = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: body ? JSON.stringify(body) : null
-  });
-  const text = await r.text(); // capture error bodies too
-  if (!r.ok) {
-    // show server’s error payload if any
-    throw new Error(text || `${r.status} ${r.statusText}`);
-  }
-  try {
-    return JSON.parse(text);
-  } catch {
-    // if server returned plain text
-    return text;
-  }
-}
-
-function b64urlToUint8Array(b64url) {
-  if (typeof b64url !== "string") {
-    throw new Error(`Expected base64url string but got: ${typeof b64url}`);
-  }
-  const padded = b64url.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((b64url.length + 3) % 4);
-  const raw = atob(padded);
-  const out = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-  return out;
-}
-function bufToB64url(buf) {
-  const bytes = new Uint8Array(buf);
-  let bin = "";
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function reviveCreationOptions(maybePk) {
-  // Accept either: { publicKey: {...} } or already the inner {...}
-  let pk = maybePk;
-  if (pk && typeof pk === "object" && pk.publicKey && !pk.publicKey.rp) {
-    // case: { publicKey: "<json-string>" }  (older server)
-    try {
-      const parsed = JSON.parse(pk.publicKey);
-      pk = parsed.publicKey || parsed; // handle nested { publicKey: {...} }
-    } catch (e) {
-      throw new Error("publicKey string was not valid JSON");
+    function log(...args) {
+      document.getElementById('log').textContent += args.join(" ") + "\n";
+      console.log(...args);
     }
-  } else if (typeof pk === "string") {
-    // case: server gave the whole thing as a string
-    const parsed = JSON.parse(pk);
-    pk = parsed.publicKey || parsed;
-  } else if (pk && pk.publicKey && pk.publicKey.rp) {
-    // case: { publicKey: { rp, user, ... } }
-    pk = pk.publicKey;
-  }
 
-  if (!pk || !pk.rp || !pk.user || !pk.challenge) {
-    throw new Error("publicKey options missing required fields");
-  }
-
-  // Convert binary fields
-  pk.challenge = b64urlToUint8Array(pk.challenge);
-  pk.user.id   = b64urlToUint8Array(pk.user.id);
-
-  // Map any excludeCredentials[].id
-  if (Array.isArray(pk.excludeCredentials)) {
-    pk.excludeCredentials = pk.excludeCredentials.map(cred => ({
-      ...cred,
-      id: typeof cred.id === "string" ? b64urlToUint8Array(cred.id) : cred.id
-    }));
-  }
-  return pk;
-}
-
-function credentialToJSON(cred) {
-  // Convert buffers to base64url for server library
-  const out = {
-    id: cred.id,
-    rawId: bufToB64url(cred.rawId),
-    type: cred.type,
-    response: {},
-    clientExtensionResults: cred.getClientExtensionResults ? cred.getClientExtensionResults() : {},
-    authenticatorAttachment: cred.authenticatorAttachment
-  };
-
-  if (cred.response) {
-    if (cred.response.attestationObject) {
-      out.response.attestationObject = bufToB64url(cred.response.attestationObject);
+    // === base64url helpers ===
+    function bufToB64Url(buf) {
+      const bytes = new Uint8Array(buf);
+      let bin = "";
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/,"");
     }
-    if (cred.response.clientDataJSON) {
-      out.response.clientDataJSON = bufToB64url(cred.response.clientDataJSON);
+
+    function b64UrlToBytes(b64url) {
+      let b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
+      while (b64.length % 4) b64 += "=";
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
     }
-    // (during registration, the other fields aren’t present)
-  }
-  return out;
-}
 
-$("btnRegister").addEventListener("click", async () => {
-  logEl.textContent = ""; // clear
-  try {
-    const userId = $("userId").value.trim();
-    const username = $("username").value.trim();
-    const displayName = $("displayName").value.trim();
+    async function beginRegistration() {
+      const userId   = document.getElementById('userId').value;
+      const username = document.getElementById('username').value;
+      const display  = document.getElementById('displayName').value;
 
-    log("➡️ Begin registration");
-    log("➡️ Fetching registration options...");
+      // 1. ask server for options
+      const resp = await fetch(`${API_BASE}/registration/options`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ userId, username, displayName: display })
+      });
+      const { publicKey, tx } = await resp.json();
+      log("BeginReg options:", publicKey, "tx:", tx);
 
-    // IMPORTANT: your server expects a POST body with userId/username/displayName
-    const begin = await api("/registration/options", { userId, username, displayName });
-    log("Begin response:", begin);
+      // 2. decode binary fields
+      publicKey.challenge = b64UrlToBytes(publicKey.challenge);
+      publicKey.user.id   = b64UrlToBytes(publicKey.user.id);
+      if (publicKey.excludeCredentials) {
+        publicKey.excludeCredentials = publicKey.excludeCredentials.map(c => ({
+          ...c,
+          id: b64UrlToBytes(c.id)
+        }));
+      }
 
-    // begin has { publicKey: <object or string>, tx: <string> }
-    const tx = begin.tx;
-    const publicKey = reviveCreationOptions(begin.publicKey);
-    log("Normalized publicKey options:", publicKey);
+      // 3. create credential
+      const cred = await navigator.credentials.create({ publicKey });
+      log("Created credential:", cred);
 
-    log("Creating credential...");
-    const cred = await navigator.credentials.create({ publicKey });
-    const att = credentialToJSON(cred);
-    log("Attestation payload (client → server):", att);
+      // 4. send attestation to server
+      const clientDataJSON    = bufToB64Url(cred.response.clientDataJSON);
+      const attestationObject = bufToB64Url(cred.response.attestationObject);
+      const rawId             = bufToB64Url(cred.rawId);
 
-    // Server expects: { tx, responseJson, label? }
-    const finish = await api("/registration/verify", {
-      tx,
-      responseJson: JSON.stringify(att),
-      label: "My Key"
-    });
-    log("✅ Registration verified:", finish);
+      const responseJson = JSON.stringify({
+        id: cred.id,
+        rawId,
+        type: cred.type,
+        response: { clientDataJSON, attestationObject },
+        clientExtensionResults: cred.getClientExtensionResults()
+      });
 
-  } catch (err) {
-    log("❌ Error:", { message: err.message, stack: err.stack });
-  }
-});
-</script>
+      const verify = await fetch(`${API_BASE}/registration/verify`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ tx, responseJson })
+      });
+      log("FinishReg status:", verify.status);
+    }
+
+    async function beginAuthentication() {
+      const username = document.getElementById('username').value;
+
+      // 1. ask server for options
+      const resp = await fetch(`${API_BASE}/authentication/options`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ username })
+      });
+      const { publicKey, tx } = await resp.json();
+      log("BeginAuth options:", publicKey, "tx:", tx);
+
+      // 2. decode binary fields
+      publicKey.challenge = b64UrlToBytes(publicKey.challenge);
+      if (publicKey.allowCredentials) {
+        publicKey.allowCredentials = publicKey.allowCredentials.map(c => ({
+          ...c,
+          id: b64UrlToBytes(c.id)
+        }));
+      }
+
+      // 3. get assertion
+      const assertion = await navigator.credentials.get({ publicKey });
+      log("Got assertion:", assertion);
+
+      // 4. send to server
+      const clientDataJSON = bufToB64Url(assertion.response.clientDataJSON);
+      const authenticatorData = bufToB64Url(assertion.response.authenticatorData);
+      const signature = bufToB64Url(assertion.response.signature);
+      const userHandle = assertion.response.userHandle ? bufToB64Url(assertion.response.userHandle) : null;
+      const rawId = bufToB64Url(assertion.rawId);
+
+      const responseJson = JSON.stringify({
+        id: assertion.id,
+        rawId,
+        type: assertion.type,
+        response: { clientDataJSON, authenticatorData, signature, userHandle },
+        clientExtensionResults: assertion.getClientExtensionResults()
+      });
+
+      const verify = await fetch(`${API_BASE}/authentication/verify`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ tx, responseJson })
+      });
+      if (!verify.ok) {
+        const err = await verify.text().catch(() => "(no body)");
+        console.error("finishAuth error:", verify.status, err);
+        log("FinishAuth status:", verify.status, "err:", err);
+      } else {
+        log("FinishAuth status:", verify.status);
+      }
+    }
+  </script>
 </body>
 </html>

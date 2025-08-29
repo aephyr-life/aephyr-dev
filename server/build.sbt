@@ -23,6 +23,9 @@ ThisBuild / turbo := true                         // faster reload / project swi
 ThisBuild / parallelExecution := true             // compile/test in parallel across modules
 Test / fork := false                              // ZIO Test runs fine in-process and is faster
 
+ThisBuild / concurrentRestrictions += Tags.limitAll(4)
+ThisBuild / useCoursier := true
+
 // fewer eviction recalculations during reload
 ThisBuild / evictionErrorLevel := Level.Info
 // print timings to spot bottlenecks
