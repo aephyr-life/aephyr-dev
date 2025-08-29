@@ -1,5 +1,5 @@
-.env
-.pg/
+.envrc.local
+.dev/
 
 # direnv / nix
 .direnv/

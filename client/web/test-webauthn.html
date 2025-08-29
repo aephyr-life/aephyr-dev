@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>WebAuthn Test Page</title>
+</head>
+<body>
+  <h1>WebAuthn Test</h1>
+
+  <div>
+    <label>User ID (UUID): <input id="userId" size="40" value="00000000-0000-0000-0000-000000000001"></label><br>
+    <label>Username: <input id="username" value="martin"></label><br>
+    <label>Display name: <input id="displayName" value="Martin"></label><br>
+    <button onclick="beginRegistration()">Begin Registration</button>
+    <button onclick="beginAuthentication()">Begin Authentication</button>
+  </div>
+
+  <pre id="log"></pre>
+
+  <script>
+    const API_BASE = "http://localhost:8080/api/webauthn";
+
+    function log(...args) {
+      document.getElementById('log').textContent += args.join(" ") + "\n";
+      console.log(...args);
+    }
+
+    // === base64url helpers ===
+    function bufToB64Url(buf) {
+      const bytes = new Uint8Array(buf);
+      let bin = "";
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/,"");
+    }
+
+    function b64UrlToBytes(b64url) {
+      let b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
+      while (b64.length % 4) b64 += "=";
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    }
+
+    async function beginRegistration() {
+      const userId   = document.getElementById('userId').value;
+      const username = document.getElementById('username').value;
+      const display  = document.getElementById('displayName').value;
+
+      // 1. ask server for options
+      const resp = await fetch(`${API_BASE}/registration/options`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ userId, username, displayName: display })
+      });
+      const { publicKey, tx } = await resp.json();
+      log("BeginReg options:", publicKey, "tx:", tx);
+
+      // 2. decode binary fields
+      publicKey.challenge = b64UrlToBytes(publicKey.challenge);
+      publicKey.user.id   = b64UrlToBytes(publicKey.user.id);
+      if (publicKey.excludeCredentials) {
+        publicKey.excludeCredentials = publicKey.excludeCredentials.map(c => ({
+          ...c,
+          id: b64UrlToBytes(c.id)
+        }));
+      }
+
+      // 3. create credential
+      const cred = await navigator.credentials.create({ publicKey });
+      log("Created credential:", cred);
+
+      // 4. send attestation to server
+      const clientDataJSON    = bufToB64Url(cred.response.clientDataJSON);
+      const attestationObject = bufToB64Url(cred.response.attestationObject);
+      const rawId             = bufToB64Url(cred.rawId);
+
+      const responseJson = JSON.stringify({
+        id: cred.id,
+        rawId,
+        type: cred.type,
+        response: { clientDataJSON, attestationObject },
+        clientExtensionResults: cred.getClientExtensionResults()
+      });
+
+      const verify = await fetch(`${API_BASE}/registration/verify`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ tx, responseJson })
+      });
+      log("FinishReg status:", verify.status);
+    }
+
+    async function beginAuthentication() {
+      const username = document.getElementById('username').value;
+
+      // 1. ask server for options
+      const resp = await fetch(`${API_BASE}/authentication/options`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ username })
+      });
+      const { publicKey, tx } = await resp.json();
+      log("BeginAuth options:", publicKey, "tx:", tx);
+
+      // 2. decode binary fields
+      publicKey.challenge = b64UrlToBytes(publicKey.challenge);
+      if (publicKey.allowCredentials) {
+        publicKey.allowCredentials = publicKey.allowCredentials.map(c => ({
+          ...c,
+          id: b64UrlToBytes(c.id)
+        }));
+      }
+
+      // 3. get assertion
+      const assertion = await navigator.credentials.get({ publicKey });
+      log("Got assertion:", assertion);
+
+      // 4. send to server
+      const clientDataJSON = bufToB64Url(assertion.response.clientDataJSON);
+      const authenticatorData = bufToB64Url(assertion.response.authenticatorData);
+      const signature = bufToB64Url(assertion.response.signature);
+      const userHandle = assertion.response.userHandle ? bufToB64Url(assertion.response.userHandle) : null;
+      const rawId = bufToB64Url(assertion.rawId);
+
+      const responseJson = JSON.stringify({
+        id: assertion.id,
+        rawId,
+        type: assertion.type,
+        response: { clientDataJSON, authenticatorData, signature, userHandle },
+        clientExtensionResults: assertion.getClientExtensionResults()
+      });
+
+      const verify = await fetch(`${API_BASE}/authentication/verify`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ tx, responseJson })
+      });
+      if (!verify.ok) {
+        const err = await verify.text().catch(() => "(no body)");
+        console.error("finishAuth error:", verify.status, err);
+        log("FinishAuth status:", verify.status, "err:", err);
+      } else {
+        log("FinishAuth status:", verify.status);
+      }
+    }
+  </script>
+</body>
+</html>

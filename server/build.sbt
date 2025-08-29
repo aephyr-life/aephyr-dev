@@ -7,9 +7,29 @@ ThisBuild / versionScheme := Some("early-semver")
 //ThisBuild / conflictManager := ConflictManager.strict
 ThisBuild / updateOptions := updateOptions.value.withLatestSnapshots(false)
 
-ThisBuild / semanticdbEnabled := true
+// off by default
+ThisBuild / semanticdbEnabled := false
 // ThisBuild / semanticdbVersion := scalafixSemanticDb.revision
+
+// enable only on hot modules (edit this list)
+webServer / semanticdbEnabled       := false
+authDomain / semanticdbEnabled      := false
+authApplication / semanticdbEnabled := false
+identityDomain / semanticdbEnabled  := false
+
 ThisBuild / cancelable.withRank(KeyRanks.Invisible) := true
+
+ThisBuild / turbo := true                         // faster reload / project switches
+ThisBuild / parallelExecution := true             // compile/test in parallel across modules
+Test / fork := false                              // ZIO Test runs fine in-process and is faster
+
+ThisBuild / concurrentRestrictions += Tags.limitAll(4)
+ThisBuild / useCoursier := true
+
+// fewer eviction recalculations during reload
+ThisBuild / evictionErrorLevel := Level.Info
+// print timings to spot bottlenecks
+ThisBuild / javaOptions += "-Dsbt.task.timings=true"
 
 ThisBuild / scalacOptions ++= Seq(
   "-deprecation",
@@ -60,6 +80,8 @@ def mod(p: String, n: String) = Project.apply(n, file(s"modules/$p"))
 lazy val root = (project in file("."))
   .aggregate(
     sharedKernel,
+    authDomain,
+    authApplication,
     identityDomain,
     identityApplication,
     diaryDomain,
@@ -84,6 +106,30 @@ lazy val sharedApplication = mod("shared/application", "shared-application")
       Libs.zioConfig,
       Libs.zioConfigTypesafe,
       Libs.zioConfigMagnolia
+    )
+  )
+// -------- BC: auth
+lazy val authDomain = mod("bc/auth/domain", "auth-domain")
+  .dependsOn(sharedKernel, identityDomain)
+
+lazy val authApplication =
+  mod("bc/auth/application", "auth-application")
+    .dependsOn(authDomain, authPorts, sharedApplication)
+    .settings(
+      libraryDependencies ++= Seq(
+        Libs.zio,
+        Libs.zioLogging,
+        Libs.zioStacktracer
+      )
+    )
+
+lazy val authPorts = mod("bc/auth/ports", "auth-ports")
+  .dependsOn(sharedKernel, authDomain, identityDomain)
+  .settings(
+    libraryDependencies ++= Seq(
+      Libs.zio,
+      Libs.zioLogging,
+      Libs.zioStacktracer
     )
   )
 
@@ -122,7 +168,7 @@ lazy val diaryApplication = mod("bc/diary/application", "diary-application")
 
 // -------- Adapters (implement Ports from *Application)
 lazy val adaptersDb = mod("adapters/db", "adapters-db")
-  .dependsOn(identityApplication, diaryApplication, sharedKernel)
+  .dependsOn(identityApplication, diaryApplication, authPorts, sharedKernel)
   .settings(
     Test / unmanagedResourceDirectories += (dbMigrations / Compile / resourceDirectory).value,
     libraryDependencies ++= prod(
@@ -146,10 +192,11 @@ lazy val adaptersImport = mod("adapters/import", "adapters-import")
   .dependsOn(sharedKernel)
 
 lazy val adaptersSecurity = mod("adapters/security", "adapters-security")
-  .dependsOn(sharedApplication, sharedKernel, identityPorts)
+  .dependsOn(sharedApplication, sharedKernel, identityPorts, authPorts)
   .settings(
     libraryDependencies ++= prod(
-      Libs.zio
+      Libs.zio,
+      Libs.webAuthn
     )
   )
 
@@ -199,17 +246,19 @@ lazy val queryApi = mod("apis/query", "query-api")
   )
 
 lazy val webServer = mod("web/server", "web-server")
-  .dependsOn(apisShared, sharedKernel, commandApi, adaptersSecurity, queryApi)
+  .dependsOn(apisShared, sharedKernel, commandApi, adaptersSecurity, adaptersDb, queryApi, authPorts)
   .settings(
     libraryDependencies ++= Seq(
       Libs.tapirCore,
       Libs.tapirRedocBundle,
       Libs.tapirRedoc,
       Libs.tapirZio,
+      Libs.tapirJsonZio,
       Libs.tapirOpenApiDocs,
       Libs.tapirZioHttp,
       Libs.tapirSttpClient,
       Libs.sttpClientCore,
+      Libs.webAuthn,
       Libs.zio,
       Libs.zioStacktracer,
       Libs.zioHttp,

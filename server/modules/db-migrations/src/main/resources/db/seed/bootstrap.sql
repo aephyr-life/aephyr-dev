@@ -1,100 +1,99 @@
--- ─────────────────────────────────────────────────────────────────────────────
--- ## Users
--- ### aephyr_migrator
--- Flyway migrations, is owner of all schemas.
---
--- ### aephyr_app:       for the general app
--- General app, has only read rights on schema >read<.
---
--- ### aephyr_projector: for the general projector
--- Projector, can read >events<, >pii<, >tech<, writes to >read<
---
--- ─────────────────────────────────────────────────────────────────────────────
+-- boostrap.sql — RUN ONCE AS SUPERUSER (POSTGRES)
 
-GRANT CREATE, USAGE ON SCHEMA public TO aephyr_migrator;
-
-CREATE SCHEMA IF NOT EXISTS events;
-CREATE SCHEMA IF NOT EXISTS pii;
-CREATE SCHEMA IF NOT EXISTS read;
+-- ── SCHEMAS
+CREATE SCHEMA IF NOT EXISTS auth;
 CREATE SCHEMA IF NOT EXISTS tech;
+CREATE SCHEMA IF NOT EXISTS audit;
+CREATE SCHEMA IF NOT EXISTS read;
+CREATE SCHEMA IF NOT EXISTS event;
 
-ALTER SCHEMA events OWNER TO aephyr_migrator;
-ALTER SCHEMA pii    OWNER TO aephyr_migrator;
-ALTER SCHEMA read   OWNER TO aephyr_migrator;
-ALTER SCHEMA tech   OWNER TO aephyr_migrator;
+-- ── EXTENSIONS (INSTALL INTO TECH, NOT PUBLIC)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pgcrypto') THEN
+    -- ENSURE EXTENSION ENDS UP IN TECH
+    EXECUTE 'ALTER EXTENSION pgcrypto SET SCHEMA tech';
+  ELSE
+    -- FRESH INSTALL DIRECTLY INTO TECH
+    EXECUTE 'CREATE EXTENSION pgcrypto WITH SCHEMA tech';
+  END IF;
+END
+$$;
 
--- Harden. Please use always schemas. Don't use the public schema
+-- ── ROLES
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'aephyr_migrator') THEN
+    CREATE ROLE aephyr_migrator LOGIN;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'aephyr_app') THEN
+    CREATE ROLE aephyr_app LOGIN;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'aephyr_projector') THEN
+    CREATE ROLE aephyr_projector LOGIN;
+  END IF;
+END
+$$;
+
+-- ── USAGE ON SCHEMAS
+GRANT USAGE ON SCHEMA auth, tech, audit, read, event
+  TO aephyr_app, aephyr_projector, aephyr_migrator;
+
+-- ── DDL PRIVILEGES FOR MIGRATOR
+GRANT CREATE, USAGE ON SCHEMA auth  TO aephyr_migrator;
+GRANT CREATE, USAGE ON SCHEMA tech  TO aephyr_migrator;
+GRANT CREATE, USAGE ON SCHEMA audit TO aephyr_migrator;
+GRANT CREATE, USAGE ON SCHEMA read  TO aephyr_migrator;
+GRANT CREATE, USAGE ON SCHEMA event TO aephyr_migrator;
+
+-- ── RUNTIME PRIVILEGES
+-- APP
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA auth  TO aephyr_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA tech  TO aephyr_app;
+GRANT INSERT                                 ON ALL TABLES IN SCHEMA audit TO aephyr_app;
+GRANT SELECT                                 ON ALL TABLES IN SCHEMA read  TO aephyr_app;
+REVOKE ALL ON ALL TABLES IN SCHEMA event FROM aephyr_app;
+
+-- PROJECTOR
+GRANT SELECT ON ALL TABLES IN SCHEMA auth  TO aephyr_projector;
+GRANT SELECT ON ALL TABLES IN SCHEMA read  TO aephyr_projector;
+GRANT SELECT ON ALL TABLES IN SCHEMA event TO aephyr_projector;
+
+-- ── DEFAULT PRIVILEGES FOR FUTURE OBJECTS (MIGRATOR CREATES THEM)
+ALTER DEFAULT PRIVILEGES IN SCHEMA auth
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO aephyr_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA tech
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO aephyr_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA audit
+  GRANT INSERT ON TABLES TO aephyr_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA read
+  GRANT SELECT ON TABLES TO aephyr_app, aephyr_projector;
+
+-- PROJECTOR DEFAULTS
+ALTER DEFAULT PRIVILEGES IN SCHEMA auth
+  GRANT SELECT ON TABLES TO aephyr_projector;
+ALTER DEFAULT PRIVILEGES IN SCHEMA read
+  GRANT SELECT ON TABLES TO aephyr_projector;
+ALTER DEFAULT PRIVILEGES IN SCHEMA event
+  GRANT SELECT ON TABLES TO aephyr_projector;
+
+-- APP SHOULD NOT SEE EVENT.* BY DEFAULT
+ALTER DEFAULT PRIVILEGES IN SCHEMA event
+  REVOKE ALL ON TABLES FROM aephyr_app;
+
+-- MIGRATOR CONVENIENCE (OWNS/ALTER ON CREATED OBJECTS)
+ALTER DEFAULT PRIVILEGES IN SCHEMA auth
+  GRANT ALL ON TABLES TO aephyr_migrator;
+ALTER DEFAULT PRIVILEGES IN SCHEMA tech
+  GRANT ALL ON TABLES TO aephyr_migrator;
+ALTER DEFAULT PRIVILEGES IN SCHEMA audit
+  GRANT ALL ON TABLES TO aephyr_migrator;
+ALTER DEFAULT PRIVILEGES IN SCHEMA read
+  GRANT ALL ON TABLES TO aephyr_migrator;
+ALTER DEFAULT PRIVILEGES IN SCHEMA event
+  GRANT ALL ON TABLES TO aephyr_migrator;
+
+-- ── HARDENING
 ALTER ROLE aephyr_app       SET search_path = '';
 ALTER ROLE aephyr_projector SET search_path = '';
 REVOKE ALL ON SCHEMA public FROM public;
-
--- pii: app can USAGE + SELECT; grant narrow writes per-table
-GRANT USAGE ON SCHEMA pii TO aephyr_app;
-GRANT SELECT ON ALL TABLES IN SCHEMA pii TO aephyr_app;
-ALTER DEFAULT PRIVILEGES IN SCHEMA pii
-  GRANT SELECT ON TABLES TO aephyr_app;
-
--- App can access the schema itself
-GRANT USAGE ON SCHEMA read TO aephyr_app;
-
--- App can read existing tables
-GRANT SELECT ON ALL TABLES IN SCHEMA read TO aephyr_app;
-
--- Future tables created by the migrator are readable by the app
-ALTER DEFAULT PRIVILEGES FOR USER aephyr_migrator IN SCHEMA read
-  GRANT SELECT ON TABLES TO aephyr_app;
-
--- (If any sequences exist in read)
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA read TO aephyr_app;
-ALTER DEFAULT PRIVILEGES FOR USER aephyr_migrator IN SCHEMA read
-  GRANT USAGE, SELECT ON SEQUENCES TO aephyr_app;
-
--- Example: allow app to write only what you need
---GRANT INSERT(id, email_norm, created_at), UPDATE(email_norm), DELETE
---  ON pii.user_email
---  TO aephyr_app;
-
-GRANT USAGE ON SCHEMA read TO aephyr_projector;
-GRANT INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA read TO aephyr_projector;
-ALTER DEFAULT PRIVILEGES FOR USER aephyr_migrator IN SCHEMA read
-  GRANT INSERT, UPDATE, DELETE ON TABLES TO aephyr_projector;
-
--- projector: read-only on pii
-GRANT USAGE ON SCHEMA pii TO aephyr_projector;
-GRANT SELECT ON ALL TABLES IN SCHEMA pii TO aephyr_projector;
-
--- tech: app owns runtime writes
-GRANT USAGE ON SCHEMA tech TO aephyr_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA tech TO aephyr_app;
-ALTER DEFAULT PRIVILEGES IN SCHEMA tech
-  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO aephyr_app;
-
--- projector on tech: read-only, unless updating outbox.claimed_at/published_at
-GRANT USAGE ON SCHEMA tech TO aephyr_projector;
-GRANT SELECT ON ALL TABLES IN SCHEMA tech TO aephyr_projector;
-
--- If projector needs to mark outbox rows as processed:
---GRANT UPDATE (claimed_at, published_at)
---  ON tech.outbox
---  TO aephyr_projector;
-
-
--- create trigger to prohibit mutability
---CREATE OR REPLACE FUNCTION tech.forbid_mutation_except_status()
---RETURNS trigger AS $$
---BEGIN
---  IF TG_OP = 'UPDATE' THEN
---    IF NEW.* IS DISTINCT FROM OLD.* EXCEPT (published_at, claimed_at) THEN
---      RAISE EXCEPTION 'Only status columns may be updated';
---    END IF;
---    RETURN NEW;
---  ELSIF TG_OP = 'DELETE' THEN
---    RAISE EXCEPTION 'Outbox rows are not deletable';
---  END IF;
---  RETURN NEW;
---END
---$$ LANGUAGE plpgsql;
---
---CREATE TRIGGER tech_outbox_guard
---BEFORE UPDATE OR DELETE ON tech.outbox
---FOR EACH ROW EXECUTE FUNCTION tech.forbid_mutation_except_status();

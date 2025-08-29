@@ -7,6 +7,7 @@
 
 package aephyr.shared.config
 
+import java.time.Duration
 import zio.*
 import zio.config.ConfigOps
 import zio.config.magnolia.*
@@ -19,9 +20,13 @@ final case class HttpCfg(host: String, port: Int)
 final case class DbPoolCfg(maxSize: Int, queueSize: Int)
 final case class DbCfg(url: String, user: String, password: String, pool: DbPoolCfg)
 
-final case class SmtpCfg(host: String, port: Int, startTls: Boolean)
+final case class AuthCfg(webauthn: WebAuthnCfg)
 
-final case class AuthCfg(magicLink: MagicLinkCfg)
+final case class WebAuthnCfg(
+                              rpId: String,
+                              rpName: String,
+                              origins: Set[String],
+                              txTtl: Duration)
 
 final case class LoggingCfg(format: String, level: String)
 
@@ -33,8 +38,6 @@ final case class AppConfig(
                           )
 
 object AppConfig:
-
-  import MagicLinkCfg.given
 
   given Config[BaseUrl] = {
     Config.string
@@ -56,10 +59,8 @@ object AppConfig:
 
   val layerWithEnvVars: ZLayer[Any, Throwable, AppConfig] = {
     ZLayer.fromZIO {
-      val fileProvider = TypesafeConfigProvider.fromResourcePath()
-      val envProvider  = ConfigProvider.fromEnv("_", ",")
-      envProvider
-        .orElse(fileProvider)
+      TypesafeConfigProvider
+        .fromResourcePath()
         .load(desc)
         .mapError(e => new RuntimeException(e.toString))
     }
@@ -77,9 +78,3 @@ object AppConfig:
 
   val logging: ZLayer[AppConfig, Nothing, LoggingCfg] =
     ZLayer.fromFunction((c: AppConfig) => c.logging)
-
-  val magicLink: ZLayer[AppConfig, Nothing, MagicLinkCfg] =
-    ZLayer.fromFunction((c: AppConfig) => c.auth.magicLink)
-
-  val magicLinkIssuance: ZLayer[AppConfig, Nothing, MagicLinkIssuance] =
-    ZLayer.fromFunction((c: AppConfig) => c.auth.magicLink.issuance)

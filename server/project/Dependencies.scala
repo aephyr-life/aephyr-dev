@@ -24,6 +24,7 @@ object Dependencies {
     val hikari           = "7.0.1"
     val embeddedPostgres = "2.0.4"
     val sttpClient       = "3.9.6"
+    val webAuthn         = "2.7.0"
   }
 
   def prod(module: ModuleID, modules: ModuleID*): Seq[ModuleID] =
@@ -68,6 +69,7 @@ object Dependencies {
     val tapirOpenApiDocs =
       "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % V.tapir
     val tapirZio = "com.softwaremill.sttp.tapir" %% "tapir-zio" % V.tapir
+    val tapirJsonZio = "com.softwaremill.sttp.tapir" %% "tapir-json-zio" % V.tapir // TODO remove?
     val tapirZioHttp =
       "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % V.tapir
 
@@ -93,6 +95,6 @@ object Dependencies {
       "com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % V.tapir
     val sttpClientCore =
       "com.softwaremill.sttp.client3" %% "core" % V.sttpClient
-
+    val webAuthn = "com.yubico" % "webauthn-server-core" % V.webAuthn
   }
 }

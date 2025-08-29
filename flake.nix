@@ -8,55 +8,63 @@
 
   outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
-      
       let
-        pkgs = import nixpkgs { inherit system; };
-        # Shared tooling used across the repo:
+        pkgs = import nixpkgs { 
+          inherit system;
+          overlays = [
+            (import ./overlays/sbt-memory.nix)
+          ]; 
+        };
         commonTools = [
-          pkgs.git 
-          pkgs.just 
+          pkgs.git
+          pkgs.just
           pkgs.direnv
           pkgs.jq
         ];
       in {
         devShells = {
-          # optional root shell (very small)
           default = pkgs.mkShell {
-            packages = commonTools;
-            shellHook = ''echo "[aephyr] root shell";'';
+            buildInputs = commonTools;
+            shellHook = ''echo "[aephyr] root shell (system=${system})"'';
           };
 
-          # Server shell: adjust to your stack
           server = pkgs.mkShell {
-            packages = commonTools ++ [
+            buildInputs = commonTools ++ [
               pkgs.jdk21
               pkgs.sbt
               pkgs.postgresql_16
             ];
             shellHook = ''
-              echo "[aephyr] server shell";
-              export PG_PORT=54329
-              export PG_DIR="$PWD/.pg"
-              export PGDATA=$"PG_DIR/data"
+              echo "[aephyr] server shell"
+              export PGDIR="$PWD/.dev/pg"
+              export PGDATA="$PGDIR/data"
               export PGHOST=localhost
+              export PGPORT=54329
               export PGDATABASE=aephyr
-              mkdir -p "$PG_DIR"
-              export SBT_OPTS="-Xms2G -Xmx2G -XX:+UseG1GC"
-            # minimal noise:
-            :
+              mkdir -p "$PGDIR"
+
+              # SBT/JVM
+              export JAVA_HOME="${pkgs.jdk21}"
+              export SBT_OPTS="''${SBT_OPTS:--Xms1G -Xmx2G -XX:+UseG1GC}"
+              
+              # thin client alias (since nixpkgs 24.05 has no pkgs.sbtn)
+              if command -v sbt >/dev/null; then
+                alias sbtn='sbt --client'
+              fi
+              # minimal noise:
+              :
             '';
           };
 
-          # Client shell: pick iOS or web
           client = pkgs.mkShell {
-            packages = commonTools ++ [
-              pkgs.ruby_3_3 
+            buildInputs = commonTools ++ [
+              pkgs.ruby_3_3
               pkgs.bundler
               pkgs.gradle
               pkgs.jdk17
             ];
             shellHook = ''
-              echo "[aephyr] client shell";
+              echo "[aephyr] client shell"
               export JAVA_HOME="${pkgs.jdk17}"
               export GRADLE_USER_HOME="$PWD/.gradle"
             '';
@@ -64,4 +72,3 @@
         };
       });
 }
-
