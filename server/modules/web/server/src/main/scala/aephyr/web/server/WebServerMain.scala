@@ -24,10 +24,12 @@ import aephyr.identity.api.command.IdentityCommandEndpoints
 import aephyr.identity.application.ports.TokenStore
 import aephyr.shared.config.AppConfig
 import aephyr.web.server.routes.api.ApiRoutes
+import aephyr.web.server.routes.web.StaticRoutes
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zio.http.*
 import zio.logging.backend.SLF4J
 import zio.{Clock, *}
+import com.typesafe.config.ConfigFactory
 
 object WebServerMain extends ZIOAppDefault:
 
@@ -41,7 +43,23 @@ object WebServerMain extends ZIOAppDefault:
 //    cmdHttp <+> qryHttp
 //  }
 
+  private def addProp(key: String, value: String | Null): Unit = {
+    value match {
+      case s: String => sys.props(key) = s
+      case _ =>
+    }
+  }
 
+  private def initLoggingProps(): Unit = {
+    val c = ConfigFactory.load().nn
+    val log = c.getConfig("app.logging").nn
+    addProp("LOG_LEVEL", log.getString("level"))
+    Option(log.getString("format")) match {
+      case Some(s: String) if s == "pretty" => addProp("CONSOLE_APPENDER", "CONSOLE_PLAIN")
+      case Some(s: String) if s == "json" => addProp("CONSOLE_APPENDER", "CONSOLE_JSON")
+      case x => throw new RuntimeException(s"unkown log format: $x")
+    }
+  }
 
   private val app = (ApiRoutes.routes)
 
@@ -53,6 +71,7 @@ object WebServerMain extends ZIOAppDefault:
     Runtime.removeDefaultLoggers >>> SLF4J.slf4j
 
   override def run: ZIO[Any, Throwable, Unit] =
+    initLoggingProps()
     ZIO.scoped {
       for {
         _ <- ZIO.addFinalizer(ZIO.logInfo("🛑 Shutting down server..."))

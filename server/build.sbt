@@ -272,7 +272,8 @@ lazy val webServer = mod("web/server", "web-server")
       Libs.logback,
       Libs.logbackEncoder
     ),
-    Compile / mainClass := Some("aephyr.web.server.WebServerMain")
+    Compile / mainClass := Some("aephyr.web.server.WebServerMain"),
+    run / javaOptions ++= Seq("-Dconfig.resource=application-dev.conf")
   )
 
 lazy val dbMigrations = mod("db-migrations", "db-migrations")

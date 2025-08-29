@@ -9,10 +9,8 @@ import scala.jdk.CollectionConverters.*
 import com.yubico.webauthn.*
 import com.yubico.webauthn.data.{ByteArray, PublicKeyCredentialDescriptor}
 
-import java.util.{Collections, Optional}
 import com.yubico.webauthn.data.*
 
-import aephyr.auth.domain.UserHandle
 import aephyr.auth.ports.WebAuthnRepo
 import aephyr.auth.ports.UserHandleRepo
 import aephyr.shared.config.AppConfig
@@ -29,13 +27,7 @@ object InMemoryRelyingParty {
         val credRepo = new CredentialRepository {
 
           import java.util.{Collections, Optional}
-          import java.util.Base64
 
-          // Helper: base64url (optional for logging)
-          private def b64u(b: Array[Byte]) =
-            Base64.getUrlEncoder.withoutPadding().encodeToString(b)
-
-          // You don't need username-first; keep these empty.
           override def getCredentialIdsForUsername(username: String)
           : java.util.Set[PublicKeyCredentialDescriptor] =
             Collections.emptySet()
@@ -43,15 +35,13 @@ object InMemoryRelyingParty {
           override def getUserHandleForUsername(username: String): Optional[ByteArray] =
             Optional.empty()
 
-          // IMPORTANT: return some stable "username" for a given userHandle.
-          // If you don't have display usernames, use userId.toString.
           override def getUsernameForUserHandle(userHandle: ByteArray): Optional[String] = {
             // Use your UserHandleRepo to resolve handle -> userId -> username/alias
             val z = handles
               .findByHandle(UserHandle(userHandle.getBytes))
-              .map {
-                case Some(uid) => Some(userRepo.usernameFor(uid).getOrElse(uid.toString))
-                case None      => None
+              .flatMap {
+                case Some(uid) => handles.usernameFor(uid)
+                case None      => ZIO.succeed(None)
               }
               .orElseSucceed(None)
 

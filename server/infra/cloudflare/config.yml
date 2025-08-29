@@ -1,0 +1,6 @@
+tunnel: fce35407-e655-4eff-890f-13cd8423f55d
+
+ingress:
+  - hostname: dev.aephyr.life
+    service: http://localhost:8080
+  - service: http_status:404

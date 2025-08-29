@@ -13,11 +13,13 @@ final case class InMemoryUserHandleRepo(store: Ref[Map[User.Id, UserHandle]]) ex
   def put(userId: User.Id, h: UserHandle): Task[Unit] =
     store.update(_ + (userId -> h)).unit
 
-  def findByHandle(userHandle: UserHandle): Task[Option[User.Id]] = {
+  def findByHandle(userHandle: UserHandle): Task[Option[User.Id]] =
     store.get.map(_.collectFirst {
       case (uid, h) if h == userHandle => uid
     })
-  }
+
+  def usernameFor(userId: User.Id): Task[Option[String]] =
+    ZIO.succeed(Some(userId.toString))
 }
 object InMemoryUserHandleRepo {
   val live: ZLayer[Any, Nothing, UserHandleRepo] =

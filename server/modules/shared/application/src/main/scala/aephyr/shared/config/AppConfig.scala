@@ -30,14 +30,17 @@ final case class WebAuthnCfg(
 
 final case class LoggingCfg(format: String, level: String)
 
+final case class AasaCfg(teamId: String, bundleId: String)
+
 final case class AppConfig(
                             http: HttpCfg,
                             db: DbCfg,
                             auth: AuthCfg,
-                            logging: LoggingCfg
+                            logging: LoggingCfg,
+                            aasa: AasaCfg
                           )
 
-object AppConfig:
+object AppConfig {
 
   given Config[BaseUrl] = {
     Config.string
@@ -45,7 +48,7 @@ object AppConfig:
         t => Config.Error.InvalidData(Chunk.empty, t))
       )
   }
-  
+
   private val desc = deriveConfig[AppConfig]
     .nested("app")
     .mapKey(_.camelToKebab)
@@ -66,15 +69,16 @@ object AppConfig:
     }
   }
 
-// optional convenience sub-layers
+  // optional convenience sub-layers
   val http: ZLayer[AppConfig, Nothing, HttpCfg] =
     ZLayer.fromFunction((c: AppConfig) => c.http)
 
-  val db: ZLayer[AppConfig, Nothing, DbCfg]      =
+  val db: ZLayer[AppConfig, Nothing, DbCfg] =
     ZLayer.fromFunction((c: AppConfig) => c.db)
 
-  val auth: ZLayer[AppConfig, Nothing, AuthCfg]    =
+  val auth: ZLayer[AppConfig, Nothing, AuthCfg] =
     ZLayer.fromFunction((c: AppConfig) => c.auth)
 
   val logging: ZLayer[AppConfig, Nothing, LoggingCfg] =
     ZLayer.fromFunction((c: AppConfig) => c.logging)
+}
