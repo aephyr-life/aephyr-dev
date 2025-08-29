@@ -1,11 +1,48 @@
-<configuration>
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+<configuration debug="false" packagingData="false">
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
+    <property name="LOG_LEVEL" value="${LOG_LEVEL:-INFO}" />
+    <property name="LOG_JSON"  value="${LOG_JSON:-false}" />
+
+    <timestamp key="ts" datePattern="yyyy-MM-dd'T'HH:mm:ss.SSSXXX"/>
+
+    <property name="CONSOLE_APPENDER" value="${CONSOLE_APPENDER:-CONSOLE_PLAIN}"/>
+
+    <appender name="CONSOLE_PLAIN" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger) - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <root level="INFO">
-        <appender-ref ref="STDOUT"/>
+    <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp />
+                <pattern>
+                    <pattern>
+                        {
+                        "level":"%level",
+                        "logger":"%logger{36}",
+                        "thread":"%thread",
+                        "message":"%message",
+                        "app":"${APP_NAME}",
+                        "ts":"%date{ISO8601}"
+                        }
+                    </pattern>
+                </pattern>
+                <mdc />
+                <context />
+                <arguments />
+                <stackTrace />
+            </providers>
+        </encoder>
+    </appender>
+
+
+    <!-- Root -->
+    <root level="${LOG_LEVEL}">
+        <!-- If LOG_PATH present, also log to file -->
+        <appender-ref ref="${CONSOLE_APPENDER}"/>
+        <!-- swap to CONSOLE_JSON when LOG_JSON=true -->
+        <!-- Simpler approach: duplicate roots with conditional; or keep two files: logback-dev.xml/logback-prod.xml -->
     </root>
 </configuration>

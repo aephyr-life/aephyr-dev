@@ -8,4 +8,5 @@ trait UserHandleRepo {
   def get(userId: User.Id): Task[Option[UserHandle]]
   def put(userId: User.Id, handle: UserHandle): Task[Unit]
   def findByHandle(handle: UserHandle): Task[Option[User.Id]]
+  def usernameFor(userId: User.Id): Task[Option[String]]
 }
