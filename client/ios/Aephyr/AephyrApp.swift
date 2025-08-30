@@ -9,9 +9,11 @@ import SwiftUI
 
 @main
 struct AephyrApp: App {
+    init() { print("AephyrApp.init") }
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear { print("ContentView appeared") }
         }
     }
 }
