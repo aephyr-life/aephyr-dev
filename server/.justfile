@@ -120,6 +120,11 @@ gen-key:
 dependencies:
   sbt ";undeclaredCompileDependencies;unusedCompileDependencies"
 
+# regenerates the bsp
+[group('dev')]
+bsp:
+	rm -rf .bsp
+	SBT_OPTS="-Xms1g -Xmx4g -XX:+UseG1GC -XX:ReservedCodeCacheSize=256m" sbt "bspConfig"
 
 # initializes the db
 [group('db')]
