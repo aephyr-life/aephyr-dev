@@ -31,16 +31,8 @@
           server = pkgs.mkShell {
             buildInputs = commonTools ++ [
               pkgs.jdk21
-              (pkgs.writeShellScriptBin "sbt" ''
-                # Ensure caches live outside the Nix store (and aren’t empty)
-                if [ -z "$XDG_CACHE_HOME" ]; then
-                  export XDG_CACHE_HOME="$HOME/.cache"
-                fi
-                export COURSIER_CACHE="$XDG_CACHE_HOME/coursier"
-
-                # Hand off to real sbt; .jvmopts supplies heap/GC flags
-                exec ${pkgs.sbt}/bin/sbt "$@"
-              '')
+              pkgs.sbt
+              pkgs.bloop
               pkgs.postgresql_16
             ];
             shellHook = ''
@@ -54,7 +46,9 @@
 
               # SBT/JVM
               export JAVA_HOME="${pkgs.jdk21}"
-              export SBT_OPTS="''${SBT_OPTS:--Xms1G -Xmx2G -XX:+UseG1GC}"
+              export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
+              export COURSIER_CACHE="$XDG_CACHE_HOME/coursier"
+              export BLOOP_JAVA_OPTS="-Xms1g -Xmx4g -XX:+UseG1GC -XX:ReservedCodeCacheSize=256m"
               
               # thin client alias (since nixpkgs 24.05 has no pkgs.sbtn)
               if command -v sbt >/dev/null; then
