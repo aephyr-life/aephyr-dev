@@ -1,0 +1,7 @@
+-Xms1g
+-Xmx4g
+-XX:+UseG1GC
+-XX:MaxInlineLevel=20
+-XX:MaxInlineSize=100
+-XX:ReservedCodeCacheSize=256m
+-Dsbt.log.noformat=true

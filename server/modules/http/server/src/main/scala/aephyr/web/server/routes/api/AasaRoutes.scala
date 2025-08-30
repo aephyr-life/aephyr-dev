@@ -19,7 +19,7 @@ object AasaRoutes {
     .in(".well-known" / "apple-app-site-association")
     .out(jsonBody[Aasa])
 
-  val route =
+  val route: ZServerEndpoint[AasaCfg, Any] =
     eAasa.zServerLogic { _ =>
       for {
         cfg <- ZIO.service[AasaCfg]

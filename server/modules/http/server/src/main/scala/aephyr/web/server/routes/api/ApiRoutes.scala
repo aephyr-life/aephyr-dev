@@ -29,8 +29,11 @@ object ApiRoutes:
       .zServerLogic { _ => ZIO.succeed("ok") }
       .asInstanceOf[ZServerEndpoint[Env, Caps]]
 
+  val aasaEp =
+    AasaRoutes.route.asInstanceOf[ZServerEndpoint[Env, Caps]]
+
   private val apiEndpoints: List[ZServerEndpoint[Env, Any]] =
-    IdentityApiEndpoints.endpoints ++ List(testEpW, healthEp)
+    IdentityApiEndpoints.endpoints ++ List(testEpW, healthEp, aasaEp)
 
   // Your business routes built from server endpoints
   private val apiRoutes: Routes[Env, Response] =

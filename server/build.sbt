@@ -1,8 +1,11 @@
 import Dependencies._
 
+Global / concurrentRestrictions := Seq()
+
 ThisBuild / organization  := "life.aephyr"
 ThisBuild / scalaVersion  := V.scala3
 ThisBuild / versionScheme := Some("early-semver")
+ThisBuild / usePipelining := true
 
 //ThisBuild / conflictManager := ConflictManager.strict
 ThisBuild / updateOptions := updateOptions.value.withLatestSnapshots(false)
@@ -12,7 +15,7 @@ ThisBuild / semanticdbEnabled := false
 // ThisBuild / semanticdbVersion := scalafixSemanticDb.revision
 
 // enable only on hot modules (edit this list)
-webServer / semanticdbEnabled       := false
+httpServer / semanticdbEnabled       := false
 authDomain / semanticdbEnabled      := false
 authApplication / semanticdbEnabled := false
 identityDomain / semanticdbEnabled  := false
@@ -72,8 +75,8 @@ ThisBuild / libraryDependencies ++= testLibs(
 //  "-Xfatal-warnings" // Fail compilation on warnings
 //)
 
-webServer / fork         := true
-webServer / connectInput := true
+httpServer / fork         := true
+httpServer / connectInput := true
 
 def mod(p: String, n: String) = Project.apply(n, file(s"modules/$p"))
 
@@ -91,7 +94,7 @@ lazy val root = (project in file("."))
     adaptersImport,
     commandApi,
     queryApi,
-    webServer,
+    httpServer,
     dbMigrations
   )
   .settings(publish / skip := true)
@@ -245,7 +248,7 @@ lazy val queryApi = mod("apis/query", "query-api")
     )
   )
 
-lazy val webServer = mod("web/server", "web-server")
+lazy val httpServer = mod("http/server", "http-server")
   .dependsOn(apisShared, sharedKernel, commandApi, adaptersSecurity, adaptersDb, queryApi, authPorts)
   .settings(
     libraryDependencies ++= Seq(
@@ -272,7 +275,7 @@ lazy val webServer = mod("web/server", "web-server")
       Libs.logback,
       Libs.logbackEncoder
     ),
-    Compile / mainClass := Some("aephyr.web.server.WebServerMain"),
+    Compile / mainClass := Some("aephyr.http.server.HttpServer"),
     run / javaOptions ++= Seq("-Dconfig.resource=application-dev.conf")
   )
 

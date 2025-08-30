@@ -31,17 +31,17 @@ import zio.logging.backend.SLF4J
 import zio.{Clock, *}
 import com.typesafe.config.ConfigFactory
 
-object WebServerMain extends ZIOAppDefault:
+object HttpServer extends ZIOAppDefault {
 
-//  private val tapirHttp = {
-//    val cmd = IdentityCommandEndpoints.all // TODO maybe rename to Api?
-//    val qry = IdentityQueryEndpoints.all
-//
-//    val cmdHttp = ZioHttpInterpreter().toHttp(cmd)
-//    val qryHttp = ZioHttpInterpreter().toHttp(qry)
-//
-//    cmdHttp <+> qryHttp
-//  }
+  //  private val tapirHttp = {
+  //    val cmd = IdentityCommandEndpoints.all // TODO maybe rename to Api?
+  //    val qry = IdentityQueryEndpoints.all
+  //
+  //    val cmdHttp = ZioHttpInterpreter().toHttp(cmd)
+  //    val qryHttp = ZioHttpInterpreter().toHttp(qry)
+  //
+  //    cmdHttp <+> qryHttp
+  //  }
 
   private def addProp(key: String, value: String | Null): Unit = {
     value match {
@@ -87,6 +87,7 @@ object WebServerMain extends ZIOAppDefault:
             InMemoryWebAuthnRepo.live,
             AppConfig.layer,
             AppConfig.db,
+            AppConfig.aasa,
             SecureRandomLive.layer,
             ZLayer.succeed(Clock.ClockLive),
             DataSourceLayer.live,
@@ -94,3 +95,4 @@ object WebServerMain extends ZIOAppDefault:
           .onInterrupt(ZIO.logInfo("📥 Interrupt received, stopping..."))
       } yield ()
     }
+}

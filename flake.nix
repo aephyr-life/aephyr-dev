@@ -31,7 +31,16 @@
           server = pkgs.mkShell {
             buildInputs = commonTools ++ [
               pkgs.jdk21
-              pkgs.sbt
+              (pkgs.writeShellScriptBin "sbt" ''
+                # Ensure caches live outside the Nix store (and aren’t empty)
+                if [ -z "$XDG_CACHE_HOME" ]; then
+                  export XDG_CACHE_HOME="$HOME/.cache"
+                fi
+                export COURSIER_CACHE="$XDG_CACHE_HOME/coursier"
+
+                # Hand off to real sbt; .jvmopts supplies heap/GC flags
+                exec ${pkgs.sbt}/bin/sbt "$@"
+              '')
               pkgs.postgresql_16
             ];
             shellHook = ''
