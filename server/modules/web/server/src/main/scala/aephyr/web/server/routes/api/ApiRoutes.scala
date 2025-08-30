@@ -22,8 +22,15 @@ object ApiRoutes:
   val testEpW: ZServerEndpoint[Env, Caps] =
     testEp.asInstanceOf[ZServerEndpoint[Env, Caps]]
 
+  private val eHealth = sttp.tapir.ztapir.endpoint.get.in("api" / "health").out(stringBody)
+
+  val healthEp: ZServerEndpoint[Env, Caps] =
+    eHealth
+      .zServerLogic { _ => ZIO.succeed("ok") }
+      .asInstanceOf[ZServerEndpoint[Env, Caps]]
+
   private val apiEndpoints: List[ZServerEndpoint[Env, Any]] =
-    IdentityApiEndpoints.endpoints ++ List(testEpW)
+    IdentityApiEndpoints.endpoints ++ List(testEpW, healthEp)
 
   // Your business routes built from server endpoints
   private val apiRoutes: Routes[Env, Response] =

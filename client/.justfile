@@ -24,6 +24,16 @@ boot-sim:
 	xcrun simctl boot "{{DEVICE}}" || true
 	open -a Simulator
 
+kmm-xc-debug:
+	./shared/gradlew -p shared clean assembleAephyrSharedDebugXCFramework
+	ln -sfn ../../shared/build/XCFrameworks/Debug/AephyrShared.xcframework ios/Vendor/AephyrShared.xcframework
+	@echo "Updated symlink to Debug XCFramework."
+
+kmm-xc-release:
+	./shared/gradlew -p shared clean assembleAephyrSharedReleaseXCFramework
+	ln -sfn ../../shared/build/XCFrameworks/Release/AephyrShared.xcframework ios/Vendor/AephyrShared.xcframework
+	@echo "Updated symlink to Release XCFramework."
+
 # --- iOS run in Simulator ---
 dev-ios: boot-sim
 	xcodebuild \
