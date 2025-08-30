@@ -46,8 +46,8 @@
 
               # SBT/JVM
               export JAVA_HOME="${pkgs.jdk21}"
-              export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
-              export COURSIER_CACHE="$XDG_CACHE_HOME/coursier"
+              # export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
+              # export COURSIER_CACHE="$XDG_CACHE_HOME/coursier"
               export BLOOP_JAVA_OPTS="-Xms1g -Xmx4g -XX:+UseG1GC -XX:ReservedCodeCacheSize=256m"
               
               # thin client alias (since nixpkgs 24.05 has no pkgs.sbtn)
