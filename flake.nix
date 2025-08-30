@@ -32,7 +32,6 @@
             buildInputs = commonTools ++ [
               pkgs.jdk21
               pkgs.sbt
-              pkgs.bloop
               pkgs.postgresql_16
             ];
             shellHook = ''
@@ -46,6 +45,9 @@
 
               # SBT/JVM
               export JAVA_HOME="${pkgs.jdk21}"
+              if [ -z "$XDG_CACHE_HOME" ]; then export XDG_CACHE_HOME="$HOME/.cache"; fi
+              export COURSIER_CACHE="$XDG_CACHE_HOME/coursier"
+              export SBT_OPTS="-Xms1g -Xmx4g -XX:+UseG1GC -XX:ReservedCodeCacheSize=256m"
               export BLOOP_JAVA_OPTS="-Xms1g -Xmx4g -XX:+UseG1GC -XX:ReservedCodeCacheSize=256m"
               
               # thin client alias (since nixpkgs 24.05 has no pkgs.sbtn)
