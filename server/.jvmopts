@@ -1,5 +1,19 @@
--Xms1g
--Xmx4g
+# Heap size
+-Xms2G
+-Xmx4G
+
+# Heap size
 -XX:+UseG1GC
 -XX:ReservedCodeCacheSize=256m
--Dsbt.log.noformat=true
+
+# Better stack traces
+-XX:+UnlockDiagnosticVMOptions
+-XX:+ShowHiddenFrames
+
+# ZIO fiber traces: (example)
+-Dzio.stacktracer.enabled=true
+
+# SBT logging
+-Dsbt.color=always
+-Dsbt.log.format=true
+-Dsbt.log.noformat=false

@@ -1,4 +1,4 @@
-package aephyr.api
+package aephyr.http.apis.shared
 
 import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
@@ -13,4 +13,3 @@ final case class ErrorDto(
 
 object ErrorDto:
   given JsonValueCodec[ErrorDto] = JsonCodecMaker.make
-

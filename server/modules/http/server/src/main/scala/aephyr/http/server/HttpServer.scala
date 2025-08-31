@@ -34,8 +34,8 @@ import com.typesafe.config.ConfigFactory
 object HttpServer extends ZIOAppDefault {
 
   //  private val tapirHttp = {
-  //    val cmd = IdentityCommandEndpoints.all // TODO maybe rename to Api?
-  //    val qry = IdentityQueryEndpoints.all
+  //    val cmd = IdentityCommands.all // TODO maybe rename to Api?
+  //    val qry = IdentityQueries.all
   //
   //    val cmdHttp = ZioHttpInterpreter().toHttp(cmd)
   //    val qryHttp = ZioHttpInterpreter().toHttp(qry)

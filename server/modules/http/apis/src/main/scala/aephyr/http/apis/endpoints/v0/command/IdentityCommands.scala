@@ -1,8 +1,9 @@
-package aephyr.identity.api.query
+package aephyr.http.apis.endpoints.v0.command
 
 import sttp.tapir.Endpoint
 
-object IdentityQueryEndpoints:
+object IdentityCommands:
   val all: List[Endpoint[?, ?, ?, ?, ?]] =
     List(
+
     )

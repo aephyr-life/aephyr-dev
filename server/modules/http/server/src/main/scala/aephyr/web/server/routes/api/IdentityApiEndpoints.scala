@@ -7,7 +7,6 @@
 
 package aephyr.web.server.routes.api
 
-import aephyr.api.ErrorMappings
 import aephyr.identity.api.command._
 import aephyr.identity.api.query._
 import sttp.tapir.ztapir._
