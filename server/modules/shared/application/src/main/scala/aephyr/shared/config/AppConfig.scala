@@ -76,6 +76,9 @@ object AppConfig {
   val db: ZLayer[AppConfig, Nothing, DbCfg] =
     ZLayer.fromFunction((c: AppConfig) => c.db)
 
+  val aasa: ZLayer[AppConfig, Nothing, AasaCfg] =
+    ZLayer.fromFunction((c: AppConfig) => c.aasa)
+
   val auth: ZLayer[AppConfig, Nothing, AuthCfg] =
     ZLayer.fromFunction((c: AppConfig) => c.auth)
 

@@ -1,8 +1,12 @@
 import Dependencies._
 
+Global / concurrentRestrictions := Seq()
+
 ThisBuild / organization  := "life.aephyr"
 ThisBuild / scalaVersion  := V.scala3
 ThisBuild / versionScheme := Some("early-semver")
+ThisBuild / usePipelining     := false
+ThisBuild / exportPipelining  := false
 
 //ThisBuild / conflictManager := ConflictManager.strict
 ThisBuild / updateOptions := updateOptions.value.withLatestSnapshots(false)
@@ -12,19 +16,16 @@ ThisBuild / semanticdbEnabled := false
 // ThisBuild / semanticdbVersion := scalafixSemanticDb.revision
 
 // enable only on hot modules (edit this list)
-webServer / semanticdbEnabled       := false
+httpServer / semanticdbEnabled       := false
 authDomain / semanticdbEnabled      := false
 authApplication / semanticdbEnabled := false
 identityDomain / semanticdbEnabled  := false
 
 ThisBuild / cancelable.withRank(KeyRanks.Invisible) := true
 
-ThisBuild / turbo := true                         // faster reload / project switches
-ThisBuild / parallelExecution := true             // compile/test in parallel across modules
+// ThisBuild / turbo := true                         // faster reload / project switches
+// ThisBuild / parallelExecution := true             // compile/test in parallel across modules
 Test / fork := false                              // ZIO Test runs fine in-process and is faster
-
-ThisBuild / concurrentRestrictions += Tags.limitAll(4)
-ThisBuild / useCoursier := true
 
 // fewer eviction recalculations during reload
 ThisBuild / evictionErrorLevel := Level.Info
@@ -72,8 +73,8 @@ ThisBuild / libraryDependencies ++= testLibs(
 //  "-Xfatal-warnings" // Fail compilation on warnings
 //)
 
-webServer / fork         := true
-webServer / connectInput := true
+httpServer / fork         := true
+httpServer / connectInput := true
 
 def mod(p: String, n: String) = Project.apply(n, file(s"modules/$p"))
 
@@ -89,9 +90,7 @@ lazy val root = (project in file("."))
     adaptersDb,
     adaptersMessaging,
     adaptersImport,
-    commandApi,
-    queryApi,
-    webServer,
+    httpServer,
     dbMigrations
   )
   .settings(publish / skip := true)
@@ -110,7 +109,7 @@ lazy val sharedApplication = mod("shared/application", "shared-application")
   )
 // -------- BC: auth
 lazy val authDomain = mod("bc/auth/domain", "auth-domain")
-  .dependsOn(sharedKernel, identityDomain)
+  .dependsOn(sharedKernel, identityDomain % "compile->compile")
 
 lazy val authApplication =
   mod("bc/auth/application", "auth-application")
@@ -201,52 +200,18 @@ lazy val adaptersSecurity = mod("adapters/security", "adapters-security")
   )
 
 // -------- APIs
-lazy val apisShared = mod("apis/shared", "apis-shared")
-  .dependsOn(sharedKernel, identityDomain)
+lazy val httpApis = mod("http/apis", "http-apis")
   .settings(
-    libraryDependencies ++= prod(
+    libraryDependencies ++= Seq(
       Libs.sttpModel,
-      Libs.jsoniterCore
-    ) ++ provided(
-      Libs.jsoniterMacros
-    )
-  )
-
-lazy val commandApi = mod("apis/command", "command-api")
-  .dependsOn(
-    identityApplication,
-    diaryApplication,
-    sharedApplication,
-    sharedKernel,
-    adaptersDb,
-    adaptersMessaging,
-    apisShared
-  )
-  .settings(
-    libraryDependencies ++= Seq(
-      Libs.jsoniterCore,
-      Libs.tapirCore,
-      Libs.tapirJsoniter
-    ) ++ provided(
-      Libs.jsoniterMacros
-    )
-  )
-
-lazy val queryApi = mod("apis/query", "query-api")
-  .dependsOn(sharedKernel, apisShared)
-  .settings(
-    libraryDependencies ++= Seq(
-      Libs.jsoniterCore,
       Libs.tapirCore,
       Libs.tapirJsoniter,
-      Libs.sttpModel
-    ) ++ provided(
-      Libs.jsoniterMacros
-    )
+      Libs.jsoniterCore
+    ) ++ provided(Libs.jsoniterMacros)
   )
 
-lazy val webServer = mod("web/server", "web-server")
-  .dependsOn(apisShared, sharedKernel, commandApi, adaptersSecurity, adaptersDb, queryApi, authPorts)
+lazy val httpServer = mod("http/server", "http-server")
+  .dependsOn(httpApis, sharedKernel, adaptersSecurity, adaptersDb, authPorts)
   .settings(
     libraryDependencies ++= Seq(
       Libs.tapirCore,
@@ -272,7 +237,7 @@ lazy val webServer = mod("web/server", "web-server")
       Libs.logback,
       Libs.logbackEncoder
     ),
-    Compile / mainClass := Some("aephyr.web.server.WebServerMain"),
+    Compile / mainClass := Some("aephyr.http.server.HttpServer"),
     run / javaOptions ++= Seq("-Dconfig.resource=application-dev.conf")
   )
 

@@ -95,10 +95,10 @@ clean:
 test:
   sbtn test
 
-# starts the web server
+# starts the http server
 [group('dev')]
 run:
-  sbtn web-server/run
+  sbtn http-server/run
 
 # formats the code
 [group('dev')]
@@ -120,25 +120,11 @@ gen-key:
 dependencies:
   sbt ";undeclaredCompileDependencies;unusedCompileDependencies"
 
-# creates a new branch
+# regenerates the bsp
 [group('dev')]
-branch:
-    @echo "Select branch type:"
-    @PS3="> "; select prefix in feature fix chore test refactor docs; do \
-        if [[ -n "$prefix" ]]; then \
-            read -r -p "Enter branch name (kebab-case): " name; \
-            git switch -c "$prefix/$name"; \
-            git push -f -u origin "$prefix/$name"; \
-            break; \
-        else \
-            echo "Invalid choice"; \
-        fi \
-    done
-
-# creates a draft pull request
-[group('dev')]
-draft-pr:
-    @gh pr create --fill --base main --draft
+bsp:
+	rm -rf .bsp
+	SBT_OPTS="-Xms1g -Xmx4g -XX:+UseG1GC -XX:ReservedCodeCacheSize=256m" sbt "bspConfig"
 
 # initializes the db
 [group('db')]
