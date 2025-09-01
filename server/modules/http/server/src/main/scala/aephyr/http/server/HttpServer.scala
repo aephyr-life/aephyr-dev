@@ -12,7 +12,7 @@
 //  See LICENSE file in the project root for license text.
 //------------------------------------------------------------------------------
 
-package aephyr.web.server
+package aephyr.http.server
 
 import aephyr.adapters.db.{DataSourceLayer, UserReadRepository, UserWriteRepository}
 import aephyr.adapters.security.webauthn.memory.InMemoryChallengeStore
@@ -20,7 +20,6 @@ import aephyr.adapters.security.webauthn.memory.InMemoryRelyingParty
 import aephyr.adapters.security.webauthn.memory.InMemoryUserHandleRepo
 import aephyr.adapters.security.webauthn.memory.InMemoryWebAuthnRepo
 import aephyr.adapters.security.SecureRandomLive
-import aephyr.identity.api.command.IdentityCommandEndpoints
 import aephyr.identity.application.ports.TokenStore
 import aephyr.shared.config.AppConfig
 import aephyr.web.server.routes.api.ApiRoutes
@@ -61,7 +60,7 @@ object HttpServer extends ZIOAppDefault {
     }
   }
 
-  private val app = (ApiRoutes.routes)
+  private val app = ApiRoutes.routes
 
   /*
   mapError(_ => Response.status(Status.InternalServerError)) @@ Middleware.debug

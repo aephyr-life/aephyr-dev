@@ -38,32 +38,11 @@ import aephyr.auth.ports.*
 import aephyr.auth.domain.*
 import aephyr.identity.domain.User
 
-final case class BeginRegInput(userId: String, username: String, displayName: String) derives JsonCodec
-final case class BeginRegOutput(publicKey: Json, tx: String) derives JsonCodec
-final case class FinishRegInput(tx: String, responseJson: String, label: Option[String]) derives JsonCodec
-
-final case class BeginAuthInput(username: Option[String]) derives JsonCodec
-final case class BeginAuthOutput(publicKey: Json, tx: String) derives JsonCodec
-final case class FinishAuthInput(tx: String, responseJson: String) derives JsonCodec
-
 object WebAuthnTestRoutes:
 
   private type Env = RelyingParty & ChallengeStore & UserHandleRepo & WebAuthnRepo
-
-  private val base = endpoint.in("api" / "webauthn")
-
-  private val eBeginReg   = base.post.in("registration"   / "options").in(jsonBody[BeginRegInput]).out(jsonBody[BeginRegOutput])
-  private val eFinishReg  =
-    base.post.in("registration"   / "verify" )
-      .in(jsonBody[FinishRegInput])
-      .out(statusCode)
-      .errorOut(stringBody)
-  private val eBeginAuth  = base.post.in("authentication" / "options").in(jsonBody[BeginAuthInput]).out(jsonBody[BeginAuthOutput])
-  private val eFinishAuth =
-    base.post.in("authentication" / "verify" )
-      .in(jsonBody[FinishAuthInput])
-      .out(statusCode.and(stringBody))
-      .errorOut(stringBody)
+  
+  
 
   import zio.json._
   import zio.json.ast.Json

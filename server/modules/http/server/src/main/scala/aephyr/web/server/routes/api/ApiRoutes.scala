@@ -33,7 +33,7 @@ object ApiRoutes:
     AasaRoutes.route.asInstanceOf[ZServerEndpoint[Env, Caps]]
 
   private val apiEndpoints: List[ZServerEndpoint[Env, Any]] =
-    IdentityApiEndpoints.endpoints ++ List(testEpW, healthEp, aasaEp)
+    List(testEpW, healthEp, aasaEp)
 
   // Your business routes built from server endpoints
   private val apiRoutes: Routes[Env, Response] =
