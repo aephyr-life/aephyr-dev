@@ -8,6 +8,7 @@
 package aephyr.kernel
 
 object StringOps:
+  
   extension (s: String)
     def camelToKebab: String =
       s.replaceAll("([a-z0-9])([A-Z])", "$1-$2").nn.toLowerCase.nn

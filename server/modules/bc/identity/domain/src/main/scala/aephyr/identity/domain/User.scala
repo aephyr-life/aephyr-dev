@@ -13,7 +13,7 @@ final case class User(
 
 object User:
 
-  opaque type Id = UUID
+  opaque type Id = UUID // TODO use UserId from kernel
   object Id:
     def apply(): Id           = UUID.randomUUID().nn
     def apply(uuid: UUID): Id = uuid

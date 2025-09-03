@@ -4,7 +4,7 @@ import zio.*
 import java.util.Base64
 import aephyr.auth.ports.WebAuthnRepo
 import aephyr.auth.domain.Credential
-import aephyr.identity.domain.User
+import aephyr.kernel.id.UserId
 
 object B64Url {
   private val enc = Base64.getUrlEncoder.nn.withoutPadding().nn
@@ -15,16 +15,16 @@ object B64Url {
 
 final case class InMemoryWebAuthnRepo(
                                        byCredId: Ref[Map[String, Credential]],       // key: b64url(credentialId)
-                                       byUser:   Ref[Map[User.Id, List[Credential]]]
+                                       byUser:   Ref[Map[UserId, List[Credential]]]
                                      ) extends WebAuthnRepo {
 
   def insert(c: Credential): Task[Unit] = {
-    val key = B64Url.encBytes(c.credentialId)
+    val key = B64Url.encBytes(c.credentialId.toArray)
     byUser.update(m => m.updated(c.userId, c :: m.getOrElse(c.userId, Nil))) *>
       byCredId.update(_ + (key -> c)).unit
   }
 
-  def findByUser(userId: User.Id): Task[List[Credential]] =
+  def findByUser(userId: UserId): Task[List[Credential]] =
     byUser.get.map(_.getOrElse(userId, Nil))
 
   def findByCredentialId(credId: Array[Byte]): Task[Option[Credential]] =
@@ -46,7 +46,7 @@ object InMemoryWebAuthnRepo {
     ZLayer.fromZIO(
       for {
         c <- Ref.make(Map.empty[String, Credential])
-        u <- Ref.make(Map.empty[User.Id, List[Credential]])
+        u <- Ref.make(Map.empty[UserId, List[Credential]])
       } yield InMemoryWebAuthnRepo(c, u)
     )
 }

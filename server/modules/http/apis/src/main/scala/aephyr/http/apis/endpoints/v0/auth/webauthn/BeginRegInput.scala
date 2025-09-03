@@ -10,11 +10,13 @@ import sttp.tapir.Schema
   * (PublicKeyCredentialCreationOptions).
   */
 final case class BeginRegInput(
-  userHandle: Option[Base64Url] = None,
-  username: Option[String] = None,
-  displayName: Option[String] = None,
+  userId: String,
+  username: String,
+  displayName: String,
   authenticatorSelection: Option[AuthenticatorSelection] = None,
-  attestation: Option[Attestation] = Some(Attestation.none)
+  attestation: Option[Attestation] =
+    None, 
+  //excludeCredentials: Option[List[CredentialDescriptor]] = None
 )
 
 object BeginRegInput {

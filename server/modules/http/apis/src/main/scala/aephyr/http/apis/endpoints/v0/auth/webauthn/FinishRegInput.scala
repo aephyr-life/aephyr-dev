@@ -14,7 +14,8 @@ final case class FinishRegInput(
   rawId: Base64Url, // typically same as id
   clientDataJSON: Base64Url, // base64url
   attestationObject: Base64Url, // base64url
-  transports: Option[List[String]] = None
+  transports: Option[List[String]] = None,
+  label: Option[String] = None
 )
 
 object FinishRegInput {

@@ -1,24 +1,29 @@
 package aephyr.auth.domain
 
-import java.util.{Arrays => JArrays}
+import aephyr.kernel.types.Bytes
+
+import java.util.Arrays as JArrays
 import scala.CanEqual
 
 /** Opaque binary user handle used by WebAuthn (stable per user). */
-final case class UserHandle private (private val bytes0: Array[Byte]) {
+final case class UserHandle private (private val bytes0: Bytes) {
+
+  def bytes: Bytes = bytes0
 
   /** Unsafe view — avoid exposing mutable internal state. Prefer `bytesCopy`. */
-  def bytesUnsafe: Array[Byte] = bytes0
+  def bytesUnsafe: Array[Byte] = bytes0.toArray
 
   /** Defensive copy for external use. */
-  def bytesCopy: Array[Byte] = JArrays.copyOf(bytes0, bytes0.length).nn
+  def bytesCopy: Array[Byte] =
+    JArrays.copyOf(bytes0.toArray, bytes0.toArray.length).nn
 
   override def equals(o: Any): Boolean = o match
-    case that: UserHandle => JArrays.equals(this.bytes0, that.bytes0)
+    case that: UserHandle => bytes0.equals(that.bytes0)
     case _                => false
 
-  override def hashCode(): Int = JArrays.hashCode(bytes0)
+  override def hashCode(): Int = JArrays.hashCode(bytes0.toArray)
 
-  override def toString: String = s"UserHandle(${bytes0.length} bytes)"
+  override def toString: String = s"UserHandle(${bytes0.toArray.length} bytes)"
 }
 
 object UserHandle {
@@ -27,9 +32,9 @@ object UserHandle {
 
   /** Create from raw bytes (defensive copy). */
   def apply(b: Array[Byte]): UserHandle =
-    new UserHandle(JArrays.copyOf(b, b.length).nn)
+    new UserHandle(Bytes.fromArray(b))
 
   /** Build from a read-only view (e.g., java.nio buffers) without extra copy. */
   def unsafeFromBytesView(b: Array[Byte]): UserHandle =
-    new UserHandle(b) // caller must ensure immutability
+    new UserHandle(Bytes.unsafeView(b)) // caller must ensure immutability
 }
