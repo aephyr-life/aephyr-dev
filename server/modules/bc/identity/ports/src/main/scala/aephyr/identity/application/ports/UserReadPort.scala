@@ -10,4 +10,4 @@ trait UserReadPort:
 
   def findById(id: UserId): IO[PersistenceError, Option[User]]
 
-  def findByEmail(email: User.EmailAddress): IO[PersistenceError, Option[User]]
+  //def findByEmail(email: User.EmailAddress): IO[PersistenceError, Option[User]]

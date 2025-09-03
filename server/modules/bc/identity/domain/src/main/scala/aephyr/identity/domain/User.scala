@@ -6,7 +6,8 @@ import java.time.Instant
 
 final case class User(
   id: UserId,
-  emailNorm: User.EmailAddress,
+  userName: String,
+  displayName: String,
   status: User.Status,
   createdAt: Instant,
   updatedAt: Instant

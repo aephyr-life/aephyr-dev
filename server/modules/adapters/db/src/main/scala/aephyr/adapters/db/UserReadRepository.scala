@@ -35,24 +35,25 @@ final case class UserReadRepository(ds: DataSource) extends UserReadPort:
       JdbcMini.queryOne(sql, Seq(Some(userId.value)))(userFromRs)
     }
 
-  override def findByEmail(
-    email: EmailAddress
-  ): IO[PersistenceError, Option[User]] =
-    import U.*
-
-    val sql =
-      s"SELECT $id, $email_norm, $status, $created_at, $updated_at " +
-        s"FROM read.users_read WHERE $email_norm = ?"
-
-    JdbcMini.withConnection(ds) {
-      JdbcMini.queryOne(sql, Seq(Some(email.normalized)))(userFromRs)
-    }
+//  override def findByEmail(
+//    email: EmailAddress
+//  ): IO[PersistenceError, Option[User]] =
+//    import U.*
+//
+//    val sql =
+//      s"SELECT $id, $email_norm, $status, $created_at, $updated_at " +
+//        s"FROM read.users_read WHERE $email_norm = ?"
+//
+//    JdbcMini.withConnection(ds) {
+//      JdbcMini.queryOne(sql, Seq(Some(email.normalized)))(userFromRs)
+//    }
 
   private def userFromRs(rs: ResultSet): User = {
     import U.*
     User(
       UserId(rs.getObject(id, classOf[UUID])),
-      User.EmailAddress(rs.getString(email_norm)),
+      "",
+      "",
       User.Status.valueOf(rs.getString(status).capitalize),
       rs.getTimestamp(created_at).toInstant,
       rs.getTimestamp(updated_at).toInstant
