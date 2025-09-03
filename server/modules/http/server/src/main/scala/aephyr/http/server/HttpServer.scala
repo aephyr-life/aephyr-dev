@@ -5,15 +5,9 @@
 //  See LICENSE file in the project root for license text.
 //------------------------------------------------------------------------------
 
-//------------------------------------------------------------------------------
-//  SPDX-License-Identifier: Aephyr-SAL-1.0
-//
-//  Licensed under the Aephyr Source Available License
-//  See LICENSE file in the project root for license text.
-//------------------------------------------------------------------------------
-
 package aephyr.http.server
 
+import aephyr.adapters.security.webauthn.yubico.WebAuthnPlatformYubico
 import aephyr.adapters.db.{DataSourceLayer, UserReadRepository, UserWriteRepository}
 import aephyr.adapters.security.webauthn.memory.InMemoryChallengeStore
 import aephyr.adapters.security.webauthn.memory.InMemoryRelyingParty
@@ -24,7 +18,6 @@ import aephyr.adapters.security.SecureRandomLive
 import aephyr.identity.application.ports.TokenStore
 import aephyr.shared.config.AppConfig
 import aephyr.http.server.routes.api.ApiRoutes
-import aephyr.web.server.routes.web.StaticRoutes
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zio.http.*
 import zio.logging.backend.SLF4J
@@ -61,7 +54,7 @@ object HttpServer extends ZIOAppDefault {
     }
   }
 
-  private val app = ApiRoutes.routes
+  private val app = ApiRoutes.routes 
 
   /*
   mapError(_ => Response.status(Status.InternalServerError)) @@ Middleware.debug

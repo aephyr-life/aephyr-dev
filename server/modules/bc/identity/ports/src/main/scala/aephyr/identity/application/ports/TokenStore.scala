@@ -2,7 +2,8 @@ package aephyr.identity.application.ports
 
 import java.time.Instant
 
-import aephyr.identity.domain.User
+import aephyr.kernel.id.UserId
+
 import aephyr.identity.domain.auth.{ TokenRecord, TokenStoreError }
 import zio.IO
 
@@ -10,7 +11,7 @@ trait TokenStore:
 
   def put(
     hash: String,
-    userId: User.Id,
+    userId: UserId,
     purpose: String,
     expiresAt: Instant,
     singleUse: Boolean

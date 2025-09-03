@@ -12,6 +12,8 @@ import aephyr.identity.domain.User.EmailAddress
 import aephyr.kernel.PersistenceError
 import zio.{ IO, ZLayer }
 
+import aephyr.kernel.id.UserId
+
 final case class UserReadRepository(ds: DataSource) extends UserReadPort:
 
   object U {
@@ -22,7 +24,7 @@ final case class UserReadRepository(ds: DataSource) extends UserReadPort:
     val updated_at = "updated_at"
   }
 
-  override def findById(userId: User.Id): IO[PersistenceError, Option[User]] =
+  override def findById(userId: UserId): IO[PersistenceError, Option[User]] =
     import U.*
 
     val sql =
@@ -49,7 +51,7 @@ final case class UserReadRepository(ds: DataSource) extends UserReadPort:
   private def userFromRs(rs: ResultSet): User = {
     import U.*
     User(
-      User.Id(rs.getObject(id, classOf[UUID])),
+      UserId(rs.getObject(id, classOf[UUID])),
       User.EmailAddress(rs.getString(email_norm)),
       User.Status.valueOf(rs.getString(status).capitalize),
       rs.getTimestamp(created_at).toInstant,

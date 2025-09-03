@@ -1,4 +1,4 @@
-package aephyr.web.server.util
+package aephyr.http.server.util
 
 import zio.http._
 

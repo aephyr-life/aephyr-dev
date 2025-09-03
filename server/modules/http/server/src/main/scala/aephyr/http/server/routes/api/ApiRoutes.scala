@@ -3,21 +3,18 @@ package aephyr.http.server.routes.api
 import aephyr.auth.application.webauthn.WebAuthnService
 import aephyr.http.server.routes.api.WebAuthnRoutes
 import aephyr.auth.ports.{ChallengeStore, UserHandleRepo, WebAuthnRepo}
-import aephyr.web.server.routes.web.StaticRoutes.testEp
 import com.yubico.webauthn.RelyingParty
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir.*
 import zio.*
 import zio.http.*
+import aephyr.http.server.routes.www.StaticRoutes
 
 object ApiRoutes:
 
   type Env = WebAuthnService // RelyingParty & ChallengeStore & UserHandleRepo & WebAuthnRepo
   type Caps = Any
-
-  val testEpW: ZServerEndpoint[Env, Caps] =
-    testEp.asInstanceOf[ZServerEndpoint[Env, Caps]]
-
+  
   private val eHealth = sttp.tapir.ztapir.endpoint.get.in("api" / "health").out(stringBody)
 
   val healthEp: ZServerEndpoint[Env, Caps] =
@@ -29,7 +26,8 @@ object ApiRoutes:
     AasaRoutes.route.asInstanceOf[ZServerEndpoint[Env, Caps]]
 
   private val apiEndpoints: List[ZServerEndpoint[Env, Caps]] =
-    List(testEpW, healthEp, aasaEp)
+    List(healthEp, aasaEp) ++ 
+      StaticRoutes.endpoints.map(_.asInstanceOf[ZServerEndpoint[Env, Caps]])
 
   // Your business routes built from server endpoints
   private val apiRoutes: Routes[Env, Response] =

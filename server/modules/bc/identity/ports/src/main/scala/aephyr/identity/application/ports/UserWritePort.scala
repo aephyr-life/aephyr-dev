@@ -6,6 +6,8 @@ import aephyr.identity.domain.User
 import aephyr.kernel.PersistenceError
 import zio._
 
+import aephyr.kernel.id.UserId
+
 /** This will be replaced with Ean event storage eventually.
   */
 trait UserWritePort {
@@ -16,11 +18,11 @@ trait UserWritePort {
   def createPending(
     email: User.EmailAddress,
     at: Instant
-  ): IO[PersistenceError, User.Id]
+  ): IO[PersistenceError, UserId]
 
   /** Activate user (idempotent). */
-  def activate(id: User.Id, at: Instant): IO[PersistenceError, Unit]
+  def activate(id: UserId, at: Instant): IO[PersistenceError, Unit]
 
   /** Touch last login (idempotent / monotonic). */
-  def touchLastLogin(id: User.Id, at: Instant): IO[PersistenceError, Unit]
+  def touchLastLogin(id: UserId, at: Instant): IO[PersistenceError, Unit]
 }
