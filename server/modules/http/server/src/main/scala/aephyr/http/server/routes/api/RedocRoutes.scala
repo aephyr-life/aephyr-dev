@@ -1,4 +1,4 @@
-package aephyr.web.server.routes.api
+package aephyr.http.server.routes.api
 
 import scala.language.unsafeNulls
 
@@ -14,11 +14,11 @@ object RedocRoutes {
 
   /** Build zio-http Routes for ReDoc docs from plain Tapir endpoints. */
   def fromEndpoints(
-    endpoints: List[AnyEndpoint],
-    title: String = "Aephyr API",
-    version: String = "v0",
-    pathPrefix: List[String] = List("api") // -> /api/docs by default
-  ): Routes[Any, Response] = {
+                     endpoints: List[AnyEndpoint],
+                     title: String = "Aephyr API",
+                     version: String = "v0",
+                     pathPrefix: List[String] = List("api") // -> /api/docs by default
+                   ): Routes[Any, Response] = {
     val redocServerEndpoints: List[ServerEndpoint[Any, Task]] =
       RedocInterpreter(
         redocUIOptions = RedocUIOptions.default.copy(pathPrefix = pathPrefix)
@@ -29,13 +29,13 @@ object RedocRoutes {
   }
 
   /** If you have ZServerEndpoints, map them to plain endpoints and reuse above.
-    */
+   */
   def fromServerEndpoints(
-    serverEndpoints: List[ServerEndpoint[?, ?]],
-    title: String = "Aephyr API",
-    version: String = "v0",
-    pathPrefix: List[String] = List("api")
-  ): Routes[Any, Response] =
+                           serverEndpoints: List[ServerEndpoint[?, ?]],
+                           title: String = "Aephyr API",
+                           version: String = "v0",
+                           pathPrefix: List[String] = List("api")
+                         ): Routes[Any, Response] =
     fromEndpoints(serverEndpoints.map(_.endpoint), title, version, pathPrefix)
 
   /** Helper to widen Any-env routes to your app env when combining. */

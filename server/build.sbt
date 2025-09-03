@@ -1,6 +1,4 @@
-import Dependencies._
-
-Global / concurrentRestrictions := Seq()
+import Dependencies.*
 
 ThisBuild / organization  := "life.aephyr"
 ThisBuild / scalaVersion  := V.scala3
@@ -109,7 +107,7 @@ lazy val sharedApplication = mod("shared/application", "shared-application")
   )
 // -------- BC: auth
 lazy val authDomain = mod("bc/auth/domain", "auth-domain")
-  .dependsOn(sharedKernel, identityDomain % "compile->compile")
+  .dependsOn(sharedKernel, identityDomain)
 
 lazy val authApplication =
   mod("bc/auth/application", "auth-application")
@@ -191,8 +189,14 @@ lazy val adaptersImport = mod("adapters/import", "adapters-import")
   .dependsOn(sharedKernel)
 
 lazy val adaptersSecurity = mod("adapters/security", "adapters-security")
-  .dependsOn(sharedApplication, sharedKernel, identityPorts, authPorts)
-  .settings(
+  .dependsOn(
+    sharedApplication,
+    sharedKernel,
+    identityPorts,
+    authPorts,
+    identityDomain,
+    authDomain
+  ).settings(
     libraryDependencies ++= prod(
       Libs.zio,
       Libs.webAuthn
@@ -201,6 +205,7 @@ lazy val adaptersSecurity = mod("adapters/security", "adapters-security")
 
 // -------- APIs
 lazy val httpApis = mod("http/apis", "http-apis")
+  .dependsOn(sharedKernel)
   .settings(
     libraryDependencies ++= Seq(
       Libs.sttpModel,
@@ -211,8 +216,14 @@ lazy val httpApis = mod("http/apis", "http-apis")
   )
 
 lazy val httpServer = mod("http/server", "http-server")
-  .dependsOn(httpApis, sharedKernel, adaptersSecurity, adaptersDb, authPorts)
-  .settings(
+  .dependsOn(
+    httpApis,
+    sharedKernel,
+    adaptersSecurity,
+    adaptersDb,
+    authPorts,
+    authApplication
+  ).settings(
     libraryDependencies ++= Seq(
       Libs.tapirCore,
       Libs.tapirRedocBundle,

@@ -63,8 +63,8 @@ object InMemoryRelyingParty {
               cOpt.map { c =>
                 RegisteredCredential.builder()
                   .credentialId(credentialId)
-                  .userHandle(new ByteArray(c.userHandleBytes))
-                  .publicKeyCose(new ByteArray(c.publicKeyCose))
+                  .userHandle(new ByteArray(c.userHandleBytes.toArray))
+                  .publicKeyCose(new ByteArray(c.publicKeyCose.toArray))
                   .signatureCount(c.signCount.toInt)
                   .build()
               }.orNull
@@ -79,8 +79,8 @@ object InMemoryRelyingParty {
               Collections.singleton(
                 RegisteredCredential.builder()
                   .credentialId(credentialId)
-                  .userHandle(new ByteArray(c.userHandleBytes)) // <-- FIX: was empty array
-                  .publicKeyCose(new ByteArray(c.publicKeyCose))
+                  .userHandle(new ByteArray(c.userHandleBytes.toArray))
+                  .publicKeyCose(new ByteArray(c.publicKeyCose.toArray))
                   .signatureCount(c.signCount.toInt)
                   .build()
               )

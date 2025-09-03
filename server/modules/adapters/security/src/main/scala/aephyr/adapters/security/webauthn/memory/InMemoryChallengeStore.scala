@@ -5,9 +5,10 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 import java.util.UUID
 import aephyr.auth.ports.ChallengeStore
+import aephyr.kernel.types.Bytes
 
 final case class InMemoryChallengeStore(
-                                         reg: Ref[Map[String, (Array[Byte], String, Instant)]],  // tx -> (userHandle, json, expires)
+                                         reg: Ref[Map[String, (Bytes, String, Instant)]],  // tx -> (userHandle, json, expires)
                                          auth: Ref[Map[String, (String, Instant)]],              // tx -> (json, expires)
                                          ttl: zio.Duration
                                        ) extends ChallengeStore {
@@ -22,7 +23,7 @@ final case class InMemoryChallengeStore(
       auth.update(_.filter { case (_, (_, exp)) => exp.isAfter(now) }).unit
     }
 
-  def putReg(userHandle: Array[Byte], requestJson: String): UIO[String] =
+  def putReg(userHandle: Bytes, requestJson: String): UIO[String] =
     for {
       _     <- cleanReg
       tx     = UUID.randomUUID().toString
@@ -31,7 +32,7 @@ final case class InMemoryChallengeStore(
       _     <- reg.update(_ + (tx -> (userHandle, requestJson, exp)))
     } yield tx
 
-  def getReg(tx: String): UIO[Option[(Array[Byte], String)]] =
+  def getReg(tx: String): UIO[Option[(Bytes, String)]] =
     reg.get.map(_.get(tx).map { case (uh, json, _) => (uh, json) })
 
   def delReg(tx: String): UIO[Unit] =
@@ -57,7 +58,7 @@ object InMemoryChallengeStore {
   def live(ttl: zio.Duration = 5.minutes): ZLayer[Any, Nothing, ChallengeStore] =
     ZLayer.fromZIO(
       for {
-        r <- Ref.make(Map.empty[String, (Array[Byte], String, Instant)])
+        r <- Ref.make(Map.empty[String, (Bytes, String, Instant)])
         a <- Ref.make(Map.empty[String, (String, Instant)])
       } yield InMemoryChallengeStore(r, a, ttl)
     )

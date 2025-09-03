@@ -1,11 +1,7 @@
-//------------------------------------------------------------------------------
-//  SPDX-License-Identifier: Aephyr-SAL-1.0
-//
-//  Licensed under the Aephyr Source Available License
-//  See LICENSE file in the project root for license text.
-//------------------------------------------------------------------------------
+package aephyr.http.server.routes.api
 
-package aephyr.web.server.routes.api
+import aephyr.auth.application.webauthn.WebAuthnService
+import aephyr.http.server.routes.api.WebAuthnRoutes
 import aephyr.auth.ports.{ChallengeStore, UserHandleRepo, WebAuthnRepo}
 import aephyr.web.server.routes.web.StaticRoutes.testEp
 import com.yubico.webauthn.RelyingParty
@@ -16,7 +12,7 @@ import zio.http.*
 
 object ApiRoutes:
 
-  type Env = RelyingParty & ChallengeStore & UserHandleRepo & WebAuthnRepo
+  type Env = WebAuthnService // RelyingParty & ChallengeStore & UserHandleRepo & WebAuthnRepo
   type Caps = Any
 
   val testEpW: ZServerEndpoint[Env, Caps] =
@@ -29,11 +25,11 @@ object ApiRoutes:
       .zServerLogic { _ => ZIO.succeed("ok") }
       .asInstanceOf[ZServerEndpoint[Env, Caps]]
 
-  val aasaEp =
+  val aasaEp: ZServerEndpoint[Env, Caps] =
     AasaRoutes.route.asInstanceOf[ZServerEndpoint[Env, Caps]]
 
-  private val apiEndpoints: List[ZServerEndpoint[Env, Any]] =
-    IdentityApiEndpoints.endpoints ++ List(testEpW, healthEp, aasaEp)
+  private val apiEndpoints: List[ZServerEndpoint[Env, Caps]] =
+    List(testEpW, healthEp, aasaEp)
 
   // Your business routes built from server endpoints
   private val apiRoutes: Routes[Env, Response] =
@@ -55,4 +51,4 @@ object ApiRoutes:
 
   // Final combined router
   val routes: Routes[Env, Response] =
-    apiRoutes ++ docsRoutes ++ WebAuthnTestRoutes.routes
+    apiRoutes ++ docsRoutes ++ WebAuthnRoutes.routes

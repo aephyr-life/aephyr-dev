@@ -2,16 +2,17 @@ package aephyr.auth.domain
 
 import java.time.Instant
 import java.util.UUID
-import aephyr.identity.domain.User
+import aephyr.kernel.id.UserId
+import aephyr.kernel.types.Bytes
 
 /** WebAuthn credential persisted in auth.user_credential. */
 final case class Credential(
                              id: UUID,
-                             userId: User.Id,
-                             credentialId: Array[Byte],   // raw credentialId (opaque)
-                             publicKeyCose: Array[Byte],  // COSE-encoded public key
+                             userId: UserId,
+                             credentialId: Bytes,   // raw credentialId (opaque)
+                             publicKeyCose: Bytes,  // COSE-encoded public key
                              signCount: Long,
-                             userHandleBytes: Array[Byte],
+                             userHandleBytes: Bytes,
                              uvRequired: Boolean,
                              transports: List[String],
                              label: Option[String],

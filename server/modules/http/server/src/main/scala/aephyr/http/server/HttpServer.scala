@@ -12,18 +12,18 @@
 //  See LICENSE file in the project root for license text.
 //------------------------------------------------------------------------------
 
-package aephyr.web.server
+package aephyr.http.server
 
 import aephyr.adapters.db.{DataSourceLayer, UserReadRepository, UserWriteRepository}
 import aephyr.adapters.security.webauthn.memory.InMemoryChallengeStore
 import aephyr.adapters.security.webauthn.memory.InMemoryRelyingParty
 import aephyr.adapters.security.webauthn.memory.InMemoryUserHandleRepo
 import aephyr.adapters.security.webauthn.memory.InMemoryWebAuthnRepo
+import aephyr.auth.application.webauthn.WebAuthnServiceLive
 import aephyr.adapters.security.SecureRandomLive
-import aephyr.identity.api.command.IdentityCommandEndpoints
 import aephyr.identity.application.ports.TokenStore
 import aephyr.shared.config.AppConfig
-import aephyr.web.server.routes.api.ApiRoutes
+import aephyr.http.server.routes.api.ApiRoutes
 import aephyr.web.server.routes.web.StaticRoutes
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zio.http.*
@@ -61,7 +61,7 @@ object HttpServer extends ZIOAppDefault {
     }
   }
 
-  private val app = (ApiRoutes.routes)
+  private val app = ApiRoutes.routes
 
   /*
   mapError(_ => Response.status(Status.InternalServerError)) @@ Middleware.debug
@@ -88,9 +88,11 @@ object HttpServer extends ZIOAppDefault {
             AppConfig.layer,
             AppConfig.db,
             AppConfig.aasa,
-            SecureRandomLive.layer,
+//            SecureRandomLive.layer,
             ZLayer.succeed(Clock.ClockLive),
             DataSourceLayer.live,
+            WebAuthnServiceLive.layer,
+            WebAuthnPlatformYubico.layer
           )
           .onInterrupt(ZIO.logInfo("📥 Interrupt received, stopping..."))
       } yield ()

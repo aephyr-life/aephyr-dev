@@ -1,7 +1,6 @@
-package aephyr.web.server.routes.api
+package aephyr.http.server.routes.api
 
 import aephyr.shared.config.AasaCfg
-
 import sttp.tapir.ztapir.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.zio.*

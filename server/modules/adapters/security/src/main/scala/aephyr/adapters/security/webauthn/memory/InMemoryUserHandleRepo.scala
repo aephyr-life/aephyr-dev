@@ -3,25 +3,25 @@ package aephyr.adapters.security.webauthn.memory
 import zio.*
 import aephyr.auth.ports.UserHandleRepo
 import aephyr.auth.domain.UserHandle
-import aephyr.identity.domain.User
+import aephyr.kernel.id.UserId
 
-final case class InMemoryUserHandleRepo(store: Ref[Map[User.Id, UserHandle]]) extends UserHandleRepo {
+final case class InMemoryUserHandleRepo(store: Ref[Map[UserId, UserHandle]]) extends UserHandleRepo {
 
-  def get(userId: User.Id): Task[Option[UserHandle]] =
+  def get(userId: UserId): Task[Option[UserHandle]] =
     store.get.map(_.get(userId))
 
-  def put(userId: User.Id, h: UserHandle): Task[Unit] =
+  def put(userId: UserId, h: UserHandle): Task[Unit] =
     store.update(_ + (userId -> h)).unit
 
-  def findByHandle(userHandle: UserHandle): Task[Option[User.Id]] =
+  def findByHandle(userHandle: UserHandle): Task[Option[UserId]] =
     store.get.map(_.collectFirst {
       case (uid, h) if h == userHandle => uid
     })
 
-  def usernameFor(userId: User.Id): Task[Option[String]] =
+  def usernameFor(userId: UserId): Task[Option[String]] =
     ZIO.succeed(Some(userId.toString))
 }
 object InMemoryUserHandleRepo {
   val live: ZLayer[Any, Nothing, UserHandleRepo] =
-    ZLayer.fromZIO(Ref.make(Map.empty[User.Id, UserHandle]).map(InMemoryUserHandleRepo.apply))
+    ZLayer.fromZIO(Ref.make(Map.empty[UserId, UserHandle]).map(InMemoryUserHandleRepo.apply))
 }
