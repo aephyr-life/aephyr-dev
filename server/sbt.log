@@ -1,65 +1,30 @@
 [[0minfo[0m] entering *experimental* thin client - BEEP WHIRR
 [[0minfo[0m] terminate the server with `shutdown`
-> http-server/compile
+> http-server/test
 [info] compiling 8 Scala sources to /Users/martin/Aephyr/aephyr-dev/server/modules/shared/kernel/target/scala-3.3.6/classes ...[0J
-[0J[info] compiling 2 Scala sources to /Users/martin/Aephyr/aephyr-dev/server/modules/adapters/db/target/scala-3.3.6/classes ...[0J
-[0J[info] compiling 2 Scala sources to /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/target/scala-3.3.6/classes ...[0J
-[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/routes/api/ApiRoutes.scala:4:37 [0J
-[0J[warn] 4 |import aephyr.http.server.routes.api.WebAuthnRoutes[0J
-[0J[warn]   |                                     ^^^^^^^^^^^^^^[0J
+[0J[info] compiling 1 Scala source to /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/target/scala-3.3.6/test-classes ...[0J
+[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/test/scala/aephyr/http/server/routes/api/MeSpec.scala:7:37 [0J
+[0J[warn] 7 |import aephyr.http.server.routes.api.MeRoutes[0J
+[0J[warn]   |                                     ^^^^^^^^[0J
 [0J[warn]   |                                     unused import[0J
-[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/routes/api/ApiRoutes.scala:5:26 [0J
-[0J[warn] 5 |import aephyr.auth.ports.{ChallengeStore, UserHandleRepo, WebAuthnRepo}[0J
-[0J[warn]   |                          ^^^^^^^^^^^^^^[0J
-[0J[warn]   |                          unused import[0J
-[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/routes/api/ApiRoutes.scala:5:42 [0J
-[0J[warn] 5 |import aephyr.auth.ports.{ChallengeStore, UserHandleRepo, WebAuthnRepo}[0J
-[0J[warn]   |                                          ^^^^^^^^^^^^^^[0J
-[0J[warn]   |                                          unused import[0J
-[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/routes/api/ApiRoutes.scala:5:58 [0J
-[0J[warn] 5 |import aephyr.auth.ports.{ChallengeStore, UserHandleRepo, WebAuthnRepo}[0J
-[0J[warn]   |                                                          ^^^^^^^^^^^^[0J
-[0J[warn]   |                                                          unused import[0J
-[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/routes/api/ApiRoutes.scala:6:27 [0J
-[0J[warn] 6 |import com.yubico.webauthn.RelyingParty[0J
-[0J[warn]   |                           ^^^^^^^^^^^^[0J
-[0J[warn]   |                           unused import[0J
-[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/routes/api/WebAuthnRoutes.scala:4:17 [0J
-[0J[warn] 4 |import java.util.UUID[0J
-[0J[warn]   |                 ^^^^[0J
-[0J[warn]   |                 unused import[0J
-[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/routes/api/WebAuthnRoutes.scala:6:25 [0J
-[0J[warn] 6 |import sttp.capabilities.WebSockets[0J
-[0J[warn]   |                         ^^^^^^^^^^[0J
-[0J[warn]   |                         unused import[0J
-[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/routes/api/WebAuthnRoutes.scala:7:29 [0J
-[0J[warn] 7 |import sttp.capabilities.zio.ZioStreams[0J
-[0J[warn]   |                             ^^^^^^^^^^[0J
-[0J[warn]   |                             unused import[0J
-[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/routes/api/WebAuthnRoutes.scala:8:18 [0J
-[0J[warn] 8 |import sttp.model.StatusCode[0J
-[0J[warn]   |                  ^^^^^^^^^^[0J
-[0J[warn]   |                  unused import[0J
-[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/routes/api/WebAuthnRoutes.scala:9:25 [0J
-[0J[warn] 9 |import sttp.tapir.ztapir.*[0J
+[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/test/scala/aephyr/http/server/routes/api/MeSpec.scala:8:25 [0J
+[0J[warn] 8 |import aephyr.auth.ports.*[0J
 [0J[warn]   |                         ^[0J
 [0J[warn]   |                         unused import[0J
-[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/routes/api/WebAuthnRoutes.scala:15:63 [0J
-[0J[warn] 15 |import aephyr.http.apis.endpoints.v0.auth.webauthn.WebAuthnApi.*[0J
-[0J[warn]    |                                                               ^[0J
-[0J[warn]    |                                                           unused import[0J
-[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/routes/api/WebAuthnRoutes.scala:18:56 [0J
-[0J[warn] 18 |import aephyr.auth.application.webauthn.WebAuthnService.*[0J
-[0J[warn]    |                                                        ^[0J
-[0J[warn]    |                                                        unused import[0J
-[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/routes/api/WebAuthnRoutes.scala:20:30 [0J
-[0J[warn] 20 |import aephyr.identity.domain.User[0J
-[0J[warn]    |                              ^^^^[0J
-[0J[warn]    |                              unused import[0J
-[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/routes/api/WebAuthnRoutes.scala:27:14 [0J
-[0J[warn] 27 |  private def toProblem(e: WebAuthnError): Problem[WebAuthnError] =[0J
+[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/test/scala/aephyr/http/server/routes/api/MeSpec.scala:20:14 [0J
+[0J[warn] 20 |  private val authLayer: ULayer[AuthExtractor] =[0J
 [0J[warn]    |              ^^^^^^^^^[0J
 [0J[warn]    |              unused private member[0J
-[0J[warn] 14 warnings found[0J
-[0J[[32msuccess[0m] Total time: 10 s, completed Sep 3, 2025, 3:26:30 PM
+[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/test/scala/aephyr/http/server/routes/api/MeSpec.scala:25:14 [0J
+[0J[warn] 25 |  private def userLayer(me: Me): ULayer[UserReadPort] =[0J
+[0J[warn]    |              ^^^^^^^^^[0J
+[0J[warn]    |              unused private member[0J
+[0J[warn] four warnings found[0J
+[0J+ /api/me[0J
+[0J  + returns current user alice[0J
+[0J1 tests passed. 0 tests failed. 0 tests ignored.[0J
+[0J
+Executed in 7 s 130 ms[0J
+[0J[info] Completed tests[0J
+[0J[[32msuccess[0m] Total time: 39 s, completed Sep 3, 2025, 8:54:02 PM
 [0J

@@ -9,7 +9,8 @@ import aephyr.auth.ports.*
 import aephyr.http.server.auth.AuthExtractor
 import aephyr.identity.application.ports.UserReadPort
 import aephyr.identity.domain.User
-import aephyr.http.apis.endpoints.v0.me.Me
+import aephyr.http.apis.endpoints.v0.me.{Me, MeError}
+import aephyr.http.server.service.me.MeService
 import aephyr.kernel.id.UserId
 
 import java.time.Instant
@@ -34,7 +35,12 @@ object MeSpec extends ZIOSpecDefault {
         )))
     })
 
-  val app: Routes[AuthExtractor & UserReadPort, Response] =
+  private def service(myself: Me): ULayer[MeService] =
+    ZLayer.succeed(new MeService {
+      override def me: IO[MeError, Me] = ZIO.succeed(myself)
+    })
+
+  val app: Routes[MeService, Response] =
     ZioHttpInterpreter().toHttp(MeRoutes.routes)
 
   def spec = suite("/api/me")(
@@ -42,7 +48,7 @@ object MeSpec extends ZIOSpecDefault {
       val me = Me("alices-id", "alice", "Alice") // TODO maybe use UserId
       val req = Request.get(URL.decode("/api/me").toOption.get)
       for {
-        res    <- app.runZIO(req).provide(authLayer ++ userLayer(me), Scope.default)
+        res    <- app.runZIO(req).provide(service(me), Scope.default)
         body   <- res.body.asString
       } yield assertTrue(res.status.isSuccess && body.contains("alice"))
     }
