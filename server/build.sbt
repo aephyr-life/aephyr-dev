@@ -95,6 +95,9 @@ lazy val root = (project in file("."))
 
 lazy val sharedKernel = mod("shared/kernel", "shared-kernel")
 
+lazy val sharedSecurity = mod("shared/security", "shared-security")
+  .dependsOn(sharedKernel)
+
 lazy val sharedApplication = mod("shared/application", "shared-application")
   .dependsOn(sharedKernel)
   .settings(
@@ -205,7 +208,7 @@ lazy val adaptersSecurity = mod("adapters/security", "adapters-security")
 
 // -------- APIs
 lazy val httpApis = mod("http/apis", "http-apis")
-  .dependsOn(sharedKernel)
+  .dependsOn(sharedKernel, sharedSecurity)
   .settings(
     libraryDependencies ++= Seq(
       Libs.sttpModel,

@@ -5,6 +5,7 @@ import sttp.tapir.generic.auto.*
 import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
 
+@Deprecated
 final case class Problem[A](
                              `type`: String,
                              title: String,
@@ -14,6 +15,7 @@ final case class Problem[A](
                              instance: Option[String] = None,
                              details: Option[A] = None
                            )
+@Deprecated
 object Problem {
 
   def apply[T](e: T): Problem[T] = Problem(
@@ -25,7 +27,7 @@ object Problem {
     None,
     Some(e)
   )
-  
+
   given [A](using JsonValueCodec[A]): JsonValueCodec[Problem[A]] =
     JsonCodecMaker.make
 
