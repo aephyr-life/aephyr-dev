@@ -5,12 +5,12 @@ import zio.*
 
 object OpsHandler {
   
-  type Env = Any
+  import HttpTypes.*
   
-  val health: ZServerEndpoint[Any, Any] =
+  val health: ZServerEndpoint[OpsHandlerEnv, Caps] =
     OpsContract.health
       .zServerLogic(_ => ZIO.succeed("ok"))
   
-  val serverEndpoints: List[ZServerEndpoint[Env, Any]] = 
+  val serverEndpoints: List[ZServerEndpoint[OpsHandlerEnv, Caps]] = 
     List(health)
 }

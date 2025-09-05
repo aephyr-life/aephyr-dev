@@ -23,7 +23,7 @@ object HttpServer extends ZIOAppDefault {
         port  = cfg.http.port
         _    <- program(port)
           .provideSomeLayer(HttpAppLayers.dev)
-          .onStart(ZIO.logInfo(s"🚀 HTTP on :$port"))
+          .tap(_ => ZIO.logInfo(s"🚀 HTTP on :$port"))
           .onInterrupt(ZIO.logInfo("📥 interrupt received"))
       } yield ()
     }

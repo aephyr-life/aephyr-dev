@@ -5,14 +5,13 @@ import aephyr.shared.config.AppConfig
 import zio.*
 
 object InfraLayers {
+
+  type Env =
+    AppConfig &
+      UserReadRepository &
+      UserWriteRepository
   
-  val live: ZLayer[
-    Any, 
-    Throwable, 
-    AppConfig & UserReadRepository & UserWriteRepository
-  ] =
-    AppConfig.layer ++
-      DataSourceLayer.live ++
-      UserReadRepository.layer ++
-      UserWriteRepository.layer
+  val live: ZLayer[aephyr.shared.config.DbCfg, Throwable, Env] =
+    (AppConfig.layer ++ DataSourceLayer.live) >>>
+      (UserReadRepository.layer ++ UserWriteRepository.layer)
 }

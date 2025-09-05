@@ -7,9 +7,9 @@ import sttp.tapir.ztapir.*
 
 object MeHandler {
 
-  type Env = MeService
+  import HttpTypes.*
 
-  val serverEndpoints: List[ZServerEndpoint[Env, Any]] =
+  val serverEndpoints: List[ZServerEndpoint[MeEnv, Any]] =
     List(me)
 
   val me: ZServerEndpoint[MeService, Any] =

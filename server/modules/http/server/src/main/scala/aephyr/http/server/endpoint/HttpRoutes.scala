@@ -1,15 +1,16 @@
 package aephyr.http.server.endpoint
 
-import zio.http.{Response, Routes}
-import sttp.tapir.server.interceptor.cors.CORSInterceptor
-import sttp.tapir.server.interceptor.log.DefaultServerLog
-import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
-import aephyr.http.server.endpoint.ops.DocsHandler
-import aephyr.auth.application.webauthn.WebAuthnService
 import zio.*
+import zio.http.{Response, Routes}
+import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
+import sttp.tapir.server.interceptor.cors.CORSInterceptor
+
+import aephyr.http.server.endpoint.ops.DocsHandler
 
 object HttpRoutes {
 
+  import HttpTypes.*
+  
   // ---- Helpers --------------------------------------------------------------
 
   /**
@@ -25,26 +26,18 @@ object HttpRoutes {
   private def widenEnv[R1, R2 <: R1](r: Routes[R2, Response]): Routes[R1, Response] =
     r.asInstanceOf[Routes[R1, Response]]
 
-  private val serverOptions: ZioHttpServerOptions[Any] = {
-    val log = DefaultServerLog(
-      doLogWhenReceived = msg => ZIO.logDebug(msg),
-      doLogWhenHandled = (msg, ex) => ex.fold(ZIO.logDebug(msg))(e => ZIO.logWarning(msg) *> ZIO.logDebug(s"${e.getMessage}")),
-      doLogAllDecodeFailures = msg => ZIO.logDebug(msg),
-      noLog = ZIO.unit
-    )
-    ZioHttpServerOptions.default
-      .copy(serverLog = log)
-      .prependInterceptor(CORSInterceptor.default) // add more interceptors here
-  }
+  // Keep server options simple; CORS is global. (Custom ServerLog APIs vary by Tapir version.)
+  private val serverOptions: ZioHttpServerOptions[Any] =
+    ZioHttpServerOptions.default.prependInterceptor(CORSInterceptor.default)
 
   private val interpreter = ZioHttpInterpreter(serverOptions)
 
   // ---- Interpret endpoint lists --------------------------------------------
 
-  private val publicRoutes: Routes[Any, Response] =
+  private val publicRoutes: Routes[PublicEnv, Response] =
     interpreter.toHttp(HttpHandler.public)
 
-  private val identityRoutes: Routes[HttpHandler.IdentityEnv, Response] =
+  private val identityRoutes: Routes[IdentityEnv, Response] =
     interpreter.toHttp(HttpHandler.identity)
 
   /**
@@ -62,8 +55,8 @@ object HttpRoutes {
   /**
    * All HTTP routes of the server, requiring the union environment `Env`.
    */
-  val routes: Routes[HttpHandler.Env, Response] =
-    widenAny[HttpHandler.Env](publicRoutes) ++
-      widenEnv[HttpHandler.Env, HttpHandler.IdentityEnv](identityRoutes) ++
-      widenAny[HttpHandler.Env](docsRoutes)
+  val routes: Routes[Env, Response] =
+    widenEnv[Env, HttpHandler.PublicEnv](publicRoutes) ++
+      widenEnv[Env, HttpHandler.IdentityEnv](identityRoutes) ++
+      widenAny[Env](docsRoutes)
 }

@@ -7,39 +7,39 @@ import www.StaticHandler
 import www.WellKnownHandler
 
 import sttp.tapir.ztapir.*
+import sttp.capabilities.WebSockets
+import sttp.capabilities.zio.ZioStreams
 
 object HttpHandler {
-
-  type DocumentedEnv = OpsHandler.Env
-  type UndocumentedEnv = WellKnownHandler.Env
-  type PublicEnv = DocumentedEnv & UndocumentedEnv
-  type IdentityEnv = MeHandler.Env & WebAuthnHandler.Env
-  type Env = PublicEnv & DocumentedEnv & UndocumentedEnv & IdentityEnv 
+  
+  import HttpTypes.*
 
   // ---- Collect endpoints ----------------------------------------------------
-  
-  /** 
-   * Endpoints that you also want to include in docs (OpenAPI/ReDoc). 
+
+  /**
+   * Endpoints that you also want to include in docs (OpenAPI/ReDoc).
    */
-  val documented: List[ZServerEndpoint[DocumentedEnv, Any]] =
+  val documented: List[ZServerEndpoint[DocumentedEnv, HttpCaps]] =
     OpsHandler.serverEndpoints
 
-  /** 
-   * Endpoints you don’t want in docs (static, well-known, etc.). 
+  /**
+   * Endpoints you don’t want in docs (static, well-known, etc.).
    */
-  val undocumented: List[ZServerEndpoint[UndocumentedEnv, Any]] =
+  val undocumented: List[ZServerEndpoint[UndocumentedEnv, HttpCaps]] =
     StaticHandler.serverEndpoints ++
       WellKnownHandler.serverEndpoints
 
-  /** 
-   * All public endpoints that require no environment. 
+  /**
+   * All public endpoints that require no environment.
    */
-  val public: List[ZServerEndpoint[PublicEnv, Any]] =
-    documented ++ undocumented
+  val public: List[ZServerEndpoint[PublicEnv, HttpCaps]] =
+    documented ++
+      undocumented.asInstanceOf[List[ZServerEndpoint[PublicEnv, HttpCaps]]]
 
-  /** 
-   * Identity / protected endpoints (need IdentityEnv). 
+
+  /**
+   * Identity / protected endpoints (need IdentityEnv).
    */
-  val identity: List[ZServerEndpoint[IdentityEnv, Any]] =
+  val identity: List[ZServerEndpoint[IdentityEnv, HttpCaps]] =
     MeHandler.serverEndpoints ++ WebAuthnHandler.serverEndpoints
 }

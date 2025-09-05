@@ -5,7 +5,8 @@ import aephyr.auth.application.webauthn.WebAuthnService
 import sttp.tapir.ztapir.*
 
 object WebAuthnHandler {
-  type Env = WebAuthnService
+  
+  import HttpTypes.*
 
   // POST /api/.../registration/options
   //    val beginRegEp: ZServerEndpoint[Env, ZioStreams & WebSockets] =
@@ -59,6 +60,6 @@ object WebAuthnHandler {
   //          .mapError(toProblem)
   //      }
   
-  val serverEndpoints: List[ZServerEndpoint[Env, Any]] =
+  val serverEndpoints: List[ZServerEndpoint[WebAuthnEnv, Caps]] =
     List()
 }

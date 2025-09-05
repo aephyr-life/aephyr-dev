@@ -2,6 +2,7 @@ package aephyr.http.server.wiring
 
 import zio.*
 import aephyr.http.server.endpoint.HttpHandler
+import aephyr.http.server.endpoint.HttpTypes
 import infra.InfraLayers
 import identity.MeLayers
 import identity.WebAuthnLayers
@@ -9,7 +10,7 @@ import identity.WebAuthnLayers
 object HttpAppLayers {
 
   /** Final environment required by HttpRoutes.routes. */
-  type Env = HttpHandler.Env // == MeService & WebAuthnService
+  type Env = HttpTypes.Env 
 
   /** Profile-based assembly (dev here; add staging/prod later). */
   val dev: ZLayer[Any, Throwable, Env] =
