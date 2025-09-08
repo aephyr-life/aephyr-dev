@@ -21,7 +21,7 @@ object MeLayers {
         val userId = ctx.bearer.value   // or parse JWT, etc.
         // TODO: fetch from repo using userId
         ZIO.succeed(Me(
-          ???, ???, ???
+          "id", "name", "display"
         ))
       }
     })
