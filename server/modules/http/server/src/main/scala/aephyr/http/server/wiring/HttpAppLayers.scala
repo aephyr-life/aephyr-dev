@@ -1,25 +1,26 @@
 package aephyr.http.server.wiring
 
 import zio.*
-import aephyr.http.server.endpoint.HttpHandler
+import aephyr.shared.config.{AppConfig, AasaCfg, DbCfg}
 import aephyr.http.server.endpoint.HttpTypes
-import infra.InfraLayers
-import identity.MeLayers
-import identity.WebAuthnLayers
-import aephyr.shared.config.{DbCfg, AasaCfg, AppConfig}
+import aephyr.http.server.security.AuthService
+import aephyr.http.server.wiring.infra.InfraLayers
+import aephyr.http.server.wiring.identity.{MeLayers, WebAuthnLayers}
 
 object HttpAppLayers {
+  type Env = HttpTypes.Env // = PublicEnv & IdentityEnv & SecurityEnv
 
-  /** Final environment required by HttpRoutes.routes. */
-  type Env = HttpTypes.Env
-  type In  = DbCfg & AasaCfg & AppConfig & Clock
+  // Inputs per your graph (adjust if InfraLayers now takes only AppConfig)
+  private type In = DbCfg & AasaCfg & (AppConfig & Clock)
 
-  /** Profile-based assembly (dev here; add staging/prod later). */
+  private val identityLayers: ZLayer[In, Throwable, HttpTypes.IdentityEnv] =
+    (InfraLayers.live >>> MeLayers.dev) ++
+      WebAuthnLayers.dev
+
+  private val publicAndSecurity: ZLayer[In, Throwable, HttpTypes.PublicEnv & HttpTypes.SecurityEnv] =
+    // pass-through AasaCfg AND provide AuthService together (no cycle)
+    (ZLayer.service[AasaCfg] ++ AuthService.live)
+
   val dev: ZLayer[In, Throwable, Env] =
-    InfraLayers.live ++
-      MeLayers.dev ++
-      WebAuthnLayers.dev ++
-      ZLayer.service[AasaCfg]
-
-  // val prod: ZLayer[Any, Throwable, Env] = InfraLayers.live ++ IdentityLayers.prod ++ WebAuthnLayers.prod
+    identityLayers ++ publicAndSecurity
 }

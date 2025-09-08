@@ -39,7 +39,7 @@ object HttpHandler {
   /**
    * Identity / protected endpoints (need IdentityEnv).
    */
-  val identity: List[ZSE[IdentityEnv]] =
-    MeHandler.serverEndpoints.map(_.widen[IdentityEnv]) ++
-    WebAuthnHandler.serverEndpoints.map(_.widen[IdentityEnv])
+  val identity: List[ZSE[Env]] =
+    MeHandler.serverEndpoints.map(_.widen[Env]) ++
+      WebAuthnHandler.serverEndpoints.map(_.widen[Env])
 }
