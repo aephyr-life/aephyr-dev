@@ -1,6 +1,7 @@
 package aephyr.http.server.endpoint.www
 
 import sttp.tapir.*
+import sttp.tapir.generic.auto.*
 import sttp.tapir.json.jsoniter.*
 import com.github.plokhotnyuk.jsoniter_scala.core.*
 import dto.Aasa

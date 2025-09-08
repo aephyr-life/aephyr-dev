@@ -2,29 +2,37 @@ package aephyr.http.server
 
 import zio.*
 import zio.http.Server
-import zio.logging.backend.SLF4J
 import aephyr.http.server.endpoint.HttpRoutes
 import aephyr.http.server.wiring.HttpAppLayers
 import aephyr.shared.config.AppConfig
 
 object HttpServer extends ZIOAppDefault {
 
-  override val bootstrap: ULayer[Unit] =
-    Runtime.removeDefaultLoggers >>> SLF4J.slf4j
+  // Provide a live Clock for your ZIO build
+  private val clockLayer: ZLayer[Any, Nothing, Clock] =
+    ZLayer.succeed(Clock.ClockLive)
 
-  private def program(port: Int): ZIO[HttpAppLayers.Env, Throwable, Unit] =
-    Server.serve(HttpRoutes.routes).provide(Server.defaultWithPort(port))
+  // Base inputs
+  private val base: ZLayer[Any, Throwable, AppConfig & Clock] =
+    AppConfig.layer ++ clockLayer
 
-  def run: ZIO[ZIOAppArgs & Scope, Nothing, Nothing] =
-    ZIO.scoped {
-      for {
-        _    <- ZIO.addFinalizer(ZIO.logInfo("🛑 shutting down..."))
-        cfg  <- ZIO.service[AppConfig]
-        port  = cfg.http.port
-        _    <- program(port)
-          .provideSomeLayer(HttpAppLayers.dev)
-          .tap(_ => ZIO.logInfo(s"🚀 HTTP on :$port"))
-          .onInterrupt(ZIO.logInfo("📥 interrupt received"))
-      } yield ()
-    }
+  // If InfraLayers still needs DbCfg, keep it; else drop DbCfg from here
+  private val httpInputs
+  : ZLayer[AppConfig, Nothing, aephyr.shared.config.DbCfg & aephyr.shared.config.AasaCfg & AppConfig] =
+    AppConfig.db ++ AppConfig.aasa ++ ZLayer.service[AppConfig]
+
+  private val appEnv: ZLayer[AppConfig & Clock, Throwable, HttpAppLayers.Env] =
+    httpInputs >>> HttpAppLayers.dev
+
+  // Provide only Server here; leave HttpAppLayers.Env to outer provide
+  private def program(port: Int): ZIO[HttpAppLayers.Env, Throwable, Nothing] =
+    Server.serve(HttpRoutes.routes)
+      .provideSome[HttpAppLayers.Env](Server.defaultWithPort(port))
+
+  override def run: ZIO[Any, Throwable, Nothing] =
+    ZIO.serviceWithZIO[AppConfig](cfg => program(cfg.http.port))
+      .provide(
+        base,   // AppConfig & Clock
+        appEnv  // AasaCfg, MeService, WebAuthnService, repos, etc.
+      )
 }

@@ -1,5 +1,10 @@
 import Dependencies.*
 
+ThisBuild / scalacOptions ++= {
+  val root = (LocalRootProject / baseDirectory).value.getAbsolutePath
+  Seq("-sourceroot", root)
+}
+
 ThisBuild / organization  := "life.aephyr"
 ThisBuild / scalaVersion  := V.scala3
 ThisBuild / versionScheme := Some("early-semver")
@@ -228,6 +233,7 @@ lazy val httpServer = mod("http/server", "http-server")
     authApplication
   ).settings(
     libraryDependencies ++= Seq(
+      Libs.jsoniterCore,
       Libs.tapirCore,
       Libs.tapirRedocBundle,
       Libs.tapirRedoc,
@@ -250,6 +256,8 @@ lazy val httpServer = mod("http/server", "http-server")
     ) ++ runtime(
       Libs.logback,
       Libs.logbackEncoder
+    )++ provided(
+      Libs.jsoniterMacros
     ),
     Compile / mainClass := Some("aephyr.http.server.HttpServer"),
     run / javaOptions ++= Seq("-Dconfig.resource=application-dev.conf")

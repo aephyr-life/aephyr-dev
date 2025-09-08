@@ -11,7 +11,7 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 
 object HttpHandler {
-  
+
   import HttpTypes.*
 
   // ---- Collect endpoints ----------------------------------------------------
@@ -19,27 +19,27 @@ object HttpHandler {
   /**
    * Endpoints that you also want to include in docs (OpenAPI/ReDoc).
    */
-  val documented: List[ZServerEndpoint[DocumentedEnv, HttpCaps]] =
+  val documented: List[ZSE[DocumentedEnv]] =
     OpsHandler.serverEndpoints
 
   /**
    * Endpoints you don’t want in docs (static, well-known, etc.).
    */
-  val undocumented: List[ZServerEndpoint[UndocumentedEnv, HttpCaps]] =
-    StaticHandler.serverEndpoints ++
-      WellKnownHandler.serverEndpoints
+  val undocumented: List[ZSE[UndocumentedEnv]] =
+    StaticHandler.serverEndpoints.map(_.widen[UndocumentedEnv]) ++
+    WellKnownHandler.serverEndpoints.map(_.widen[UndocumentedEnv])
 
   /**
    * All public endpoints that require no environment.
    */
-  val public: List[ZServerEndpoint[PublicEnv, HttpCaps]] =
-    documented ++
-      undocumented.asInstanceOf[List[ZServerEndpoint[PublicEnv, HttpCaps]]]
-
+  val public: List[ZSE[PublicEnv]] =
+    documented.map(_.widen[PublicEnv]) ++
+    undocumented.map(_.widen[PublicEnv])
 
   /**
    * Identity / protected endpoints (need IdentityEnv).
    */
-  val identity: List[ZServerEndpoint[IdentityEnv, HttpCaps]] =
-    MeHandler.serverEndpoints ++ WebAuthnHandler.serverEndpoints
+  val identity: List[ZSE[IdentityEnv]] =
+    MeHandler.serverEndpoints.map(_.widen[IdentityEnv]) ++
+    WebAuthnHandler.serverEndpoints.map(_.widen[IdentityEnv])
 }

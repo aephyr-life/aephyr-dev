@@ -16,6 +16,10 @@ final case class Problem[A](
 )
 
 object Problem {
+  
+  def apply[A](a: A): Problem[A] = Problem(
+    "", "", -1, None, None, None, Some(a)
+  )
 
   given [A](using JsonValueCodec[A]): JsonValueCodec[Problem[A]] =
     JsonCodecMaker.make

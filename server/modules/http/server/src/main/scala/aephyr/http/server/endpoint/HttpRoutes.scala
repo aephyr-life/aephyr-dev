@@ -1,62 +1,38 @@
 package aephyr.http.server.endpoint
 
 import zio.*
-import zio.http.{Response, Routes}
-import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
+import zio.http.* // Routes, Response, etc.
+
+import sttp.tapir.ztapir.* // .widen, ZServerEndpoint, etc.
 import sttp.tapir.server.interceptor.cors.CORSInterceptor
+import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
 
 import aephyr.http.server.endpoint.ops.DocsHandler
 
 object HttpRoutes {
+  import HttpTypes.* // Caps, ZSE, Env
 
-  import HttpTypes.*
-  
-  // ---- Helpers --------------------------------------------------------------
-
-  /**
-   * Widen Routes[Any, _] to any richer environment.
-   * Safe because it needs nothing.
-   */
-  private def widenAny[R](r: Routes[Any, Response]): Routes[R, Response] =
-    r.asInstanceOf[Routes[R, Response]]
-
-  /**
-   * Widen a specific env to a richer super-env (intersection type).
-   */
-  private def widenEnv[R1, R2 <: R1](r: Routes[R2, Response]): Routes[R1, Response] =
-    r.asInstanceOf[Routes[R1, Response]]
-
-  // Keep server options simple; CORS is global. (Custom ServerLog APIs vary by Tapir version.)
+  // 1) Server options (CORS)
   private val serverOptions: ZioHttpServerOptions[Any] =
     ZioHttpServerOptions.default.prependInterceptor(CORSInterceptor.default)
 
+  // 2) Interpreter
   private val interpreter = ZioHttpInterpreter(serverOptions)
 
-  // ---- Interpret endpoint lists --------------------------------------------
+  // 3) Widen endpoints to Env first (type-safe), then interpret to zio-http Routes
+  private val publicZseEnv: List[ZSE[Env]]   = HttpHandler.public.map(_.widen[Env])
+  private val identityZseEnv: List[ZSE[Env]] = HttpHandler.identity.map(_.widen[Env])
 
-  private val publicRoutes: Routes[PublicEnv, Response] =
-    interpreter.toHttp(HttpHandler.public)
+  private val publicRoutes: Routes[Env, Response]   = interpreter.toHttp(publicZseEnv)
+  private val identityRoutes: Routes[Env, Response] = interpreter.toHttp(identityZseEnv)
 
-  private val identityRoutes: Routes[IdentityEnv, Response] =
-    interpreter.toHttp(HttpHandler.identity)
-
-  /**
-   * Docs from *plain* endpoints (only those you mark as documented + identity)
-   */
+  // 4) Docs (these need Any)
   private val docsRoutes: Routes[Any, Response] = {
-    val plain =
-      HttpHandler.documented.map(_.endpoint) ++
-        HttpHandler.identity.map(_.endpoint)
+    val plain = HttpHandler.documented.map(_.endpoint) ++ HttpHandler.identity.map(_.endpoint)
     interpreter.toHttp(DocsHandler.fromEndpoints(plain))
   }
 
-  // ---- Final combined router -----------------------------------------------
-
-  /**
-   * All HTTP routes of the server, requiring the union environment `Env`.
-   */
+  // 5) Combine. Cast docs (Any) to Env is safe: it needs nothing.
   val routes: Routes[Env, Response] =
-    widenEnv[Env, HttpHandler.PublicEnv](publicRoutes) ++
-      widenEnv[Env, HttpHandler.IdentityEnv](identityRoutes) ++
-      widenAny[Env](docsRoutes)
+    publicRoutes ++ identityRoutes ++ docsRoutes.asInstanceOf[Routes[Env, Response]]
 }

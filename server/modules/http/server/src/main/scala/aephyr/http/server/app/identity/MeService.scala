@@ -5,7 +5,7 @@ import aephyr.identity.application.ports.UserReadPort
 import zio.*
 
 trait MeService {
-  def me: IO[MeError, Me]
+  def me(id: String): IO[MeError, Me]
 }
 
 object MeService {
@@ -17,7 +17,7 @@ final class MeServiceLive(
                            users:     UserReadPort
                          ) extends MeService:
 
-  def me: IO[MeError, Me] =
+  def me(bla: String): IO[MeError, Me] =
     for {
       maybeId <- ZIO.succeed(None) //extractor.extract.mapError(_ => MeError.NotAuthenticated)
       userId  <- ZIO.fromOption(maybeId).orElseFail(MeError.NotAuthenticated)
