@@ -1,11 +1,12 @@
 package aephyr.http.server.wiring
 
+import aephyr.http.server.app.identity.MeService
 import zio.*
-import aephyr.shared.config.{AppConfig, AasaCfg, DbCfg}
+import aephyr.shared.config.{AasaCfg, AppConfig, DbCfg}
 import aephyr.http.server.endpoint.HttpTypes
 import aephyr.http.server.security.AuthService
 import aephyr.http.server.wiring.infra.InfraLayers
-import aephyr.http.server.wiring.identity.{MeLayers, WebAuthnLayers}
+import aephyr.http.server.wiring.identity.WebAuthnLayers
 
 object HttpAppLayers {
   type Env = HttpTypes.Env // = PublicEnv & IdentityEnv & SecurityEnv
@@ -14,7 +15,7 @@ object HttpAppLayers {
   private type In = DbCfg & AasaCfg & (AppConfig & Clock)
 
   private val identityLayers: ZLayer[In, Throwable, HttpTypes.IdentityEnv] =
-    (InfraLayers.live >>> MeLayers.dev) ++
+    (InfraLayers.live >>> MeService.live) ++
       WebAuthnLayers.dev
 
   private val publicAndSecurity: ZLayer[In, Throwable, HttpTypes.PublicEnv & HttpTypes.SecurityEnv] =

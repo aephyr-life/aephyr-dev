@@ -1,6 +1,6 @@
 package aephyr.http.server.endpoint.www
 
-import aephyr.http.server.endpoint.HttpTypes.* // brings Caps, ZSE
+import aephyr.http.server.endpoint.HttpTypes.*
 import sttp.tapir.PublicEndpoint
 import sttp.tapir.ztapir.*
 import zio.*
@@ -8,8 +8,6 @@ import zio.*
 import java.nio.charset.StandardCharsets
 import scala.io.Source
 import java.io.InputStream
-
-import sttp.tapir.ztapir.*
 
 object StaticHandler {
 

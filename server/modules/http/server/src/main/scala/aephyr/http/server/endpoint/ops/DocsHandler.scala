@@ -6,9 +6,7 @@ import sttp.tapir.AnyEndpoint
 import sttp.tapir.redoc.RedocUIOptions
 import sttp.tapir.redoc.bundle.RedocInterpreter
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zio.*
-import zio.http.*
 
 object DocsHandler {
 

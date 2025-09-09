@@ -7,8 +7,6 @@ import www.StaticHandler
 import www.WellKnownHandler
 
 import sttp.tapir.ztapir.*
-import sttp.capabilities.WebSockets
-import sttp.capabilities.zio.ZioStreams
 
 object HttpHandler {
 

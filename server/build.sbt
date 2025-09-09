@@ -1,9 +1,6 @@
 import Dependencies.*
 
-ThisBuild / scalacOptions ++= {
-  val root = (LocalRootProject / baseDirectory).value.getAbsolutePath
-  Seq("-sourceroot", root)
-}
+ThisBuild / logLevel := Level.Warn
 
 ThisBuild / organization  := "life.aephyr"
 ThisBuild / scalaVersion  := V.scala3
@@ -26,14 +23,10 @@ identityDomain / semanticdbEnabled  := false
 
 ThisBuild / cancelable.withRank(KeyRanks.Invisible) := true
 
-// ThisBuild / turbo := true                         // faster reload / project switches
-// ThisBuild / parallelExecution := true             // compile/test in parallel across modules
-Test / fork := false                              // ZIO Test runs fine in-process and is faster
+ThisBuild / Test / fork := true
+ThisBuild / Test / javaOptions += "--sun-misc-unsafe-memory-access=allow"
 
-// fewer eviction recalculations during reload
 ThisBuild / evictionErrorLevel := Level.Info
-// print timings to spot bottlenecks
-ThisBuild / javaOptions += "-Dsbt.task.timings=true"
 
 ThisBuild / scalacOptions ++= Seq(
   "-deprecation",
@@ -48,7 +41,8 @@ ThisBuild / scalacOptions ++= Seq(
   "-language:strictEquality"
 )
 
-ThisBuild / testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
+Test / testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
+Test / testOptions += Tests.Argument(TestFrameworks.ZIOTest, "-q")
 
 ThisBuild / dependencyOverrides := Seq(
   Libs.zio,

@@ -2,6 +2,8 @@ package aephyr.http.server.security
 
 import zio.*
 import aephyr.api.shared.AuthenticationContext
+import aephyr.kernel.id.UserId
+import aephyr.security.Principal
 
 sealed trait AuthError extends Throwable
 object AuthError {
@@ -9,7 +11,7 @@ object AuthError {
 }
 
 trait AuthService {
-  def authenticate(ctx: AuthenticationContext): IO[AuthError, AuthenticationContext]
+  def authenticate(ctx: AuthenticationContext): IO[AuthError, Principal]
 }
 
 object AuthService {
@@ -17,8 +19,10 @@ object AuthService {
   val live: ULayer[AuthService] =
     ZLayer.succeed(
       new AuthService {
-        override def authenticate(ctx: AuthenticationContext): IO[AuthError, AuthenticationContext] =
-          ZIO.succeed(ctx) // IO[Nothing, _] widens to IO[AuthError, _]
+        override def authenticate(ctx: AuthenticationContext): IO[AuthError, Principal] =
+          ZIO.succeed(
+            Principal(UserId.random) // TODO extract UserId
+          ) // IO[Nothing, _] widens to IO[AuthError, _]
       }
     )
 }

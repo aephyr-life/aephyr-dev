@@ -8,7 +8,6 @@ import java.util.UUID
 
 import com.github.plokhotnyuk.jsoniter_scala.core.*
 import sttp.tapir.Schema
-import sttp.tapir.Validator
 
 object UserIdCodecs {
 

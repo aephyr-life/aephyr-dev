@@ -2,7 +2,6 @@ package aephyr.http.apis.endpoints.v0.auth.webauthn
 
 import aephyr.http.apis.Problem
 import aephyr.http.apis.TapirDsl.*
-import sttp.model.StatusCode
 import sttp.tapir.PublicEndpoint
 
 object WebAuthnApi {

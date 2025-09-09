@@ -1,7 +1,5 @@
 package aephyr.http.server.endpoint.identity
 
-import aephyr.auth.application.webauthn.WebAuthnService
-
 import sttp.tapir.ztapir.*
 import aephyr.http.server.endpoint.HttpTypes.*
 

@@ -112,7 +112,7 @@ clean:
 # runs the tests
 [group('dev')]
 test:
-  sbtn test
+  @sbtn test
 
 # starts the http server
 [group('dev')]

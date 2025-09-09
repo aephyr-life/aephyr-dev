@@ -8,7 +8,6 @@ import scala.language.unsafeNulls
 
 import aephyr.identity.application.ports.UserReadPort
 import aephyr.identity.domain.User
-import aephyr.identity.domain.User.EmailAddress
 import aephyr.kernel.PersistenceError
 import zio.{ IO, ZLayer }
 

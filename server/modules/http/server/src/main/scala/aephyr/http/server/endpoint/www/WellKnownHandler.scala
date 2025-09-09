@@ -6,8 +6,6 @@ import aephyr.shared.config.AasaCfg
 import aephyr.http.server.endpoint.HttpTypes.*
 
 import sttp.tapir.ztapir.*
-import sttp.capabilities.WebSockets
-import sttp.capabilities.zio.ZioStreams
 import zio.*
 
 object WellKnownHandler {

@@ -23,9 +23,11 @@ final class WebAuthnPlatformYubico(rp: RelyingParty) extends WebAuthnPlatform:
                                   selection: Option[AuthenticatorSelection],
                                   attestation: Option[AttestationConveyance],
                                   exclude: List[CredDescriptor]
-                                ): IO[Throwable, (CreationOptions, String)] =
+                                ): IO[Throwable, (CreationOptions, String)] = {
+    rp.getClock
     ZIO.fail(???)
-//    ZIO.attempt {
+  }
+  //    ZIO.attempt {
 //      val optsB = StartRegistrationOptions
 //        .builder()
 //        .user(toYubicoUser(user))

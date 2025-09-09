@@ -3,6 +3,7 @@ package aephyr.kernel
 sealed trait PersistenceError extends Throwable
 
 object PersistenceError {
+  
   final case class OptimisticLock(expected: Long, actual: Long)
     extends Exception(s"version conflict: expected=$expected actual=$actual")
     with PersistenceError
