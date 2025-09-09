@@ -1,14 +1,14 @@
 package aephyr.http.apis.endpoints.v0.auth.webauthn
 
-import aephyr.http.apis.Problem
-import aephyr.http.apis.TapirDsl.*
+import aephyr.api.shared.Problem
+import aephyr.api.TapirDsl.*
 import sttp.tapir.PublicEndpoint
 
 object WebAuthnApi {
 
-  private val webauthn = base[WebAuthnError].in("webauthn")
+  private val webauthn = base[WebAuthnErrorDto].in("webauthn")
 
-  val registrationOptions: PublicEndpoint[BeginRegInput, Problem[WebAuthnError], BeginRegOutput, Any] =
+  val registrationOptions: PublicEndpoint[BeginRegInput, Problem[WebAuthnErrorDto], BeginRegOutput, Any] =
     webauthn
       .post
       .in("registration" / "options")

@@ -4,7 +4,7 @@ import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker
 import sttp.tapir.Schema
 
-enum Attestation:
+enum Attestation derives CanEqual:
   case none, indirect, direct, enterprise
 
 object Attestation {

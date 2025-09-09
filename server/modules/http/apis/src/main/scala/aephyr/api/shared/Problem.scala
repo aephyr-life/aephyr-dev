@@ -16,6 +16,10 @@ final case class Problem[A](
 )
 
 object Problem {
+
+  def apply[A](a: String): Problem[A] = Problem(
+    "", a, -1, None, None, None, None
+  )
   
   def apply[A](a: A): Problem[A] = Problem(
     "", "", -1, None, None, None, Some(a)

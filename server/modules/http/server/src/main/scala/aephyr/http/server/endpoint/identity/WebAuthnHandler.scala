@@ -1,9 +1,34 @@
 package aephyr.http.server.endpoint.identity
 
+import aephyr.api.shared.Problem
+import aephyr.auth.application.webauthn.WebAuthnService
+import aephyr.auth.application.webauthn.WebAuthnService.{BeginRegCmd, BeginRegResult}
+import aephyr.auth.domain
+import aephyr.http.apis.endpoints.v0.auth.webauthn.model.{Attestation, AuthenticatorSelection, CredDescriptor, PubKeyCredParam, RpEntity, UserEntity}
+import aephyr.http.apis.endpoints.v0.auth.webauthn.{BeginRegInput, BeginRegOutput, WebAuthnApi, WebAuthnErrorDto, model}
 import sttp.tapir.ztapir.*
 import aephyr.http.server.endpoint.HttpTypes.*
+import aephyr.http.server.endpoint.identity.WebAuthnHandler.beginRegCmd
+import aephyr.http.server.mapping.webauthn.WebAuthnDtoMapper
+import aephyr.http.server.security.AuthService
+import aephyr.kernel.codec.Base64UrlCodec
+import aephyr.kernel.id.UserId
+import aephyr.kernel.types.Base64Url
+import zio.{IO, ZIO}
+import aephyr.kernel.types.Base64Url.*
 
 object WebAuthnHandler {
+
+  private type WebAuthnEnv = WebAuthnService
+  
+  val registrationOptions: ZSE[WebAuthnEnv] =
+    WebAuthnApi.registrationOptions.zServerLogic { in =>
+     for {
+       cmd <- WebAuthnDtoMapper.beginRegCmd(in)
+       reg <- WebAuthnService.beginRegistration(cmd).mapError(WebAuthnDtoMapper.toProblem)
+       res <- WebAuthnDtoMapper.beginRegOut(reg)
+     } yield res
+    }
 
   // POST /api/.../registration/options
   //    val beginRegEp: ZServerEndpoint[Env, ZioStreams & WebSockets] =

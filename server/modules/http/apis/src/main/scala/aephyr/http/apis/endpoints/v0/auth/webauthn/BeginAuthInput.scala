@@ -1,10 +1,11 @@
 package aephyr.http.apis.endpoints.v0.auth.webauthn
 
+import aephyr.kernel.types.Base64Url
+import aephyr.kernel.jsoniter.given
+import aephyr.kernel.tapir.given
+
 import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 import com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker
-
-import aephyr.http.apis.types.Base64Url
-
 import sttp.tapir.Schema
 import sttp.tapir.generic.auto.*
 

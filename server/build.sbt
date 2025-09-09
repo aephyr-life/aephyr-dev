@@ -77,7 +77,9 @@ def mod(p: String, n: String) = Project.apply(n, file(s"modules/$p"))
 
 lazy val root = (project in file("."))
   .aggregate(
-    sharedKernel,
+    kernel,
+    kernelJsoniter,
+    kernelTapir,
     authDomain,
     authApplication,
     identityDomain,
@@ -92,15 +94,30 @@ lazy val root = (project in file("."))
   )
   .settings(publish / skip := true)
 
-lazy val sharedKernel = mod("shared/kernel", "shared-kernel")
+lazy val kernel = mod("shared/kernel", "kernel")
+
+lazy val kernelJsoniter = mod("shared/kernel-jsoniter", "kernel-jsoniter")
+  .dependsOn(kernel)
+  .settings(
+    libraryDependencies ++=
+      prod(Libs.jsoniterCore) ++
+        provided(Libs.jsoniterMacros)
+  )
+
+lazy val kernelTapir = mod("shared/kernel-tapir", "kernel-tapir")
+  .dependsOn(kernel)
+  .settings(
+    libraryDependencies ++=
+      prod(Libs.tapirCore)
+  )
 
 lazy val sharedSecurity = mod("shared/security", "shared-security")
-  .dependsOn(sharedKernel)
+  .dependsOn(kernel)
 
 lazy val sharedApplication = mod("shared/application", "shared-application")
-  .dependsOn(sharedKernel)
+  .dependsOn(kernel)
   .settings(
-    libraryDependencies ++= Seq(
+    libraryDependencies ++= prod(
       Libs.zio,
       Libs.zioConfig,
       Libs.zioConfigTypesafe,
@@ -109,13 +126,13 @@ lazy val sharedApplication = mod("shared/application", "shared-application")
   )
 // -------- BC: auth
 lazy val authDomain = mod("bc/auth/domain", "auth-domain")
-  .dependsOn(sharedKernel, identityDomain)
+  .dependsOn(kernel, identityDomain)
 
 lazy val authApplication =
   mod("bc/auth/application", "auth-application")
     .dependsOn(authDomain, authPorts, sharedApplication)
     .settings(
-      libraryDependencies ++= Seq(
+      libraryDependencies ++= prod(
         Libs.zio,
         Libs.zioLogging,
         Libs.zioStacktracer
@@ -123,9 +140,9 @@ lazy val authApplication =
     )
 
 lazy val authPorts = mod("bc/auth/ports", "auth-ports")
-  .dependsOn(sharedKernel, authDomain, identityDomain)
+  .dependsOn(kernel, authDomain, identityDomain)
   .settings(
-    libraryDependencies ++= Seq(
+    libraryDependencies ++= prod(
       Libs.zio,
       Libs.zioLogging,
       Libs.zioStacktracer
@@ -134,13 +151,13 @@ lazy val authPorts = mod("bc/auth/ports", "auth-ports")
 
 // -------- BC: identity
 lazy val identityDomain = mod("bc/identity/domain", "identity-domain")
-  .dependsOn(sharedKernel)
+  .dependsOn(kernel)
 
 lazy val identityApplication =
   mod("bc/identity/application", "identity-application")
     .dependsOn(identityDomain, identityPorts, sharedApplication)
     .settings(
-      libraryDependencies ++= Seq(
+      libraryDependencies ++= prod(
         Libs.zio,
         Libs.zioLogging,
         Libs.zioStacktracer
@@ -160,14 +177,14 @@ lazy val identityPorts =
 
 // -------- BC: diary
 lazy val diaryDomain = mod("bc/diary/domain", "diary-domain")
-  .dependsOn(sharedKernel)
+  .dependsOn(kernel)
 
 lazy val diaryApplication = mod("bc/diary/application", "diary-application")
   .dependsOn(diaryDomain, identityDomain)
 
 // -------- Adapters (implement Ports from *Application)
 lazy val adaptersDb = mod("adapters/db", "adapters-db")
-  .dependsOn(identityApplication, diaryApplication, authPorts, sharedKernel)
+  .dependsOn(identityApplication, diaryApplication, authPorts, kernel)
   .settings(
     Test / unmanagedResourceDirectories += (dbMigrations / Compile / resourceDirectory).value,
     libraryDependencies ++= prod(
@@ -179,7 +196,7 @@ lazy val adaptersDb = mod("adapters/db", "adapters-db")
   )
 
 lazy val adaptersMessaging = mod("adapters/messaging", "adapters-messaging")
-  .dependsOn(identityApplication, diaryApplication, sharedKernel)
+  .dependsOn(identityApplication, diaryApplication, kernel)
   .settings(
     libraryDependencies ++= prod(
       Libs.zio,
@@ -188,12 +205,12 @@ lazy val adaptersMessaging = mod("adapters/messaging", "adapters-messaging")
   )
 
 lazy val adaptersImport = mod("adapters/import", "adapters-import")
-  .dependsOn(sharedKernel)
+  .dependsOn(kernel)
 
 lazy val adaptersSecurity = mod("adapters/security", "adapters-security")
   .dependsOn(
     sharedApplication,
-    sharedKernel,
+    kernel,
     identityPorts,
     authPorts,
     identityDomain,
@@ -208,9 +225,9 @@ lazy val adaptersSecurity = mod("adapters/security", "adapters-security")
 
 // -------- APIs
 lazy val httpApis = mod("http/apis", "http-apis")
-  .dependsOn(sharedKernel, sharedSecurity)
+  .dependsOn(kernel, kernelJsoniter, kernelTapir, sharedSecurity)
   .settings(
-    libraryDependencies ++= Seq(
+    libraryDependencies ++= prod(
       Libs.sttpModel,
       Libs.tapirCore,
       Libs.tapirJsoniter,
@@ -221,13 +238,13 @@ lazy val httpApis = mod("http/apis", "http-apis")
 lazy val httpServer = mod("http/server", "http-server")
   .dependsOn(
     httpApis,
-    sharedKernel,
+    kernel,
     adaptersSecurity,
     adaptersDb,
     authPorts,
     authApplication
   ).settings(
-    libraryDependencies ++= Seq(
+    libraryDependencies ++= prod(
       Libs.jsoniterCore,
       Libs.tapirCore,
       Libs.tapirRedocBundle,

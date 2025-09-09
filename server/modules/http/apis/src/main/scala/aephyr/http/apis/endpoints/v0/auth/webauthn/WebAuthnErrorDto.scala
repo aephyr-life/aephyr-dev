@@ -5,22 +5,22 @@ import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodec
 
 import sttp.tapir.Schema
 
-sealed trait WebAuthnError
+sealed trait WebAuthnErrorDto
 
-object WebAuthnError {
+object WebAuthnErrorDto {
 
-  case object InvalidChallenge extends WebAuthnError
+  case object InvalidChallenge extends WebAuthnErrorDto
 
-  case object NotRegistered extends WebAuthnError
+  case object NotRegistered extends WebAuthnErrorDto
 
-  case object ServerError extends WebAuthnError
+  final case class ServerError(msg: String) extends WebAuthnErrorDto
 
-  given JsonValueCodec[WebAuthnError] =
+  given JsonValueCodec[WebAuthnErrorDto] =
     JsonCodecMaker
       .make(
         CodecMakerConfig
           .withDiscriminatorFieldName(Some("type"))
       )
 
-  given Schema[WebAuthnError] = Schema.derived
+  given Schema[WebAuthnErrorDto] = Schema.derived
 }

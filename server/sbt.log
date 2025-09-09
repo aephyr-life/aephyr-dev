@@ -1,5 +1,59 @@
 [[0minfo[0m] entering *experimental* thin client - BEEP WHIRR
 [[0minfo[0m] terminate the server with `shutdown`
 > http-server/compile
-[[32msuccess[0m] Total time: 3 s, completed Sep 9, 2025, 11:01:58 AM
+[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/shared/kernel-jsoniter/src/main/scala/aephyr/kernel/jsoniter/Base64UrlJsoniter.scala:7:52 [0J
+[0J[warn] 7 |import com.github.plokhotnyuk.jsoniter_scala.macros.*[0J
+[0J[warn]   |                                                    ^[0J
+[0J[warn]   |                                                    unused import[0J
+[0J[warn] one warning found[0J
+[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/endpoint/identity/WebAuthnHandler.scala:11:60 [0J
+[0J[warn] 11 |import aephyr.http.server.endpoint.identity.WebAuthnHandler.beginRegCmd[0J
+[0J[warn]    |                                                            ^^^^^^^^^^^[0J
+[0J[warn]    |                                                           unused import[0J
+[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/endpoint/identity/WebAuthnHandler.scala:12:35 [0J
+[0J[warn] 12 |import aephyr.http.server.security.AuthService[0J
+[0J[warn]    |                                   ^^^^^^^^^^^[0J
+[0J[warn]    |                                   unused import[0J
+[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/endpoint/identity/WebAuthnHandler.scala:13:27 [0J
+[0J[warn] 13 |import aephyr.kernel.codec.Base64UrlCodec[0J
+[0J[warn]    |                           ^^^^^^^^^^^^^^[0J
+[0J[warn]    |                           unused import[0J
+[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/endpoint/identity/WebAuthnHandler.scala:29:19 [0J
+[0J[warn] 29 |    def toDomainAS(in: AuthenticatorSelection): domain.webauthn.AuthenticatorSelection = ???[0J
+[0J[warn]    |                   ^^[0J
+[0J[warn]    |                   unused local definition[0J
+[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/endpoint/identity/WebAuthnHandler.scala:31:23 [0J
+[0J[warn] 31 |    def toDomainAttest(in: model.Attestation): domain.webauthn.AttestationConveyance = ???[0J
+[0J[warn]    |                       ^^[0J
+[0J[warn]    |                       unused local definition[0J
+[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/endpoint/identity/WebAuthnHandler.scala:54:18 [0J
+[0J[warn] 54 |    def challenge(options: domain.webauthn.CreationOptions): Base64Url =[0J
+[0J[warn]    |                  ^^^^^^^[0J
+[0J[warn]    |                  unused local definition[0J
+[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/endpoint/identity/WebAuthnHandler.scala:56:25 [0J
+[0J[warn] 56 |    def pubKeyCredParams(options: domain.webauthn.CreationOptions): List[PubKeyCredParam] =[0J
+[0J[warn]    |                         ^^^^^^^[0J
+[0J[warn]    |                         unused local definition[0J
+[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/endpoint/identity/WebAuthnHandler.scala:58:16 [0J
+[0J[warn] 58 |    def timeout(options: domain.webauthn.CreationOptions): Option[Long] =[0J
+[0J[warn]    |                ^^^^^^^[0J
+[0J[warn]    |                unused local definition[0J
+[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/endpoint/identity/WebAuthnHandler.scala:60:23 [0J
+[0J[warn] 60 |    def credDescriptor(options: domain.webauthn.CreationOptions): Option[List[CredDescriptor]] =[0J
+[0J[warn]    |                       ^^^^^^^[0J
+[0J[warn]    |                       unused local definition[0J
+[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/endpoint/identity/WebAuthnHandler.scala:62:30 [0J
+[0J[warn] 62 |    def authenticatorSeletion(options: domain.webauthn.CreationOptions): Option[AuthenticatorSelection] =[0J
+[0J[warn]    |                              ^^^^^^^[0J
+[0J[warn]    |                              unused local definition[0J
+[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/endpoint/identity/WebAuthnHandler.scala:64:20 [0J
+[0J[warn] 64 |    def attestation(options: domain.webauthn.CreationOptions): Option[Attestation] =[0J
+[0J[warn]    |                    ^^^^^^^[0J
+[0J[warn]    |                    unused local definition[0J
+[0J[warn] -- [E198] Unused Symbol Warning: /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/src/main/scala/aephyr/http/server/mapping/webauthn/WebAuthnDtoMapper.scala:27:30 [0J
+[0J[warn] 27 |  private def toDomainAuthSel(in: DAuthSel): domain.webauthn.AuthenticatorSelection =[0J
+[0J[warn]    |                              ^^[0J
+[0J[warn]    |                              unused explicit parameter[0J
+[0J[warn] 12 warnings found[0J
+[0J[[32msuccess[0m] Total time: 2 s, completed Sep 9, 2025, 8:03:47 PM
 [0J

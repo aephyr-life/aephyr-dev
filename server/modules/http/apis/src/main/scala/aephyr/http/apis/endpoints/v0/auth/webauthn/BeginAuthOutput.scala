@@ -5,7 +5,9 @@ import com.github.plokhotnyuk.jsoniter_scala.macros.*
 
 import aephyr.http.apis.endpoints.v0.auth.webauthn.model.CredDescriptor
 import aephyr.http.apis.endpoints.v0.auth.webauthn.model.UserVerification
-import aephyr.http.apis.types.Base64Url
+import aephyr.kernel.types.Base64Url
+import aephyr.kernel.jsoniter.given
+import aephyr.kernel.tapir.given
 
 import sttp.tapir.Schema
 import sttp.tapir.generic.auto.*
