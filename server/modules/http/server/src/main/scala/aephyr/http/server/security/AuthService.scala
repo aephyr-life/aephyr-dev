@@ -2,27 +2,32 @@ package aephyr.http.server.security
 
 import zio.*
 import aephyr.api.shared.AuthenticationContext
-import aephyr.kernel.id.UserId
+import aephyr.auth.ports.JwtVerifier
+import aephyr.identity.application.ports.UserReadPort
+import aephyr.identity.domain.User
+import aephyr.identity.domain.auth.AuthError
 import aephyr.security.Principal
-
-sealed trait AuthError extends Throwable
-object AuthError {
-  case object InvalidToken extends AuthError
-}
 
 trait AuthService {
   def authenticate(ctx: AuthenticationContext): IO[AuthError, Principal]
 }
 
 object AuthService {
-  // DEV: accept any token; swap for real JWT checks later
-  val live: ULayer[AuthService] =
-    ZLayer.succeed(
+  val live: URLayer[JwtVerifier & UserReadPort, AuthService] =
+    ZLayer.fromFunction { (verifier: JwtVerifier, users: UserReadPort) =>
       new AuthService {
-        override def authenticate(ctx: AuthenticationContext): IO[AuthError, Principal] =
-          ZIO.succeed(
-            Principal(UserId.random) // TODO extract UserId
-          ) // IO[Nothing, _] widens to IO[AuthError, _]
+        def authenticate(ctx: AuthenticationContext): IO[AuthError, Principal] =
+          for {
+            token <- ZIO.fromOption(ctx.bearer.map(_.value))
+                        .mapError(_ => AuthError.MissingCredentials)
+            v     <- verifier.verifyAccess(token)
+            user  <- users
+                        .findById(v.userId)
+                        .mapError(_ => AuthError.InvalidToken)
+                        .someOrFail(AuthError.UserNotFound)
+            _     <- ZIO.fail(AuthError.UserDisabled)
+                        .when(user.status != User.Status.Active)
+          } yield Principal(user.id) // , v.roles, user.status
       }
-    )
+    }
 }

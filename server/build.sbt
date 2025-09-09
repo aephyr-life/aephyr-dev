@@ -201,7 +201,8 @@ lazy val adaptersSecurity = mod("adapters/security", "adapters-security")
   ).settings(
     libraryDependencies ++= prod(
       Libs.zio,
-      Libs.webAuthn
+      Libs.webAuthn,
+      Libs.nimbus
     )
   )
 

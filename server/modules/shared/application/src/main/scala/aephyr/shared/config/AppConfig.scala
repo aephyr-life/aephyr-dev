@@ -20,7 +20,8 @@ final case class HttpCfg(host: String, port: Int)
 final case class DbPoolCfg(maxSize: Int, queueSize: Int)
 final case class DbCfg(url: String, user: String, password: String, pool: DbPoolCfg)
 
-final case class AuthCfg(webauthn: WebAuthnCfg)
+final case class JwtCfg(issuer: String, audience: String, jwkSetJson: String)
+final case class AuthCfg(webauthn: WebAuthnCfg, jwt: JwtCfg)
 
 final case class WebAuthnCfg(
                               rpId: String,
@@ -60,14 +61,14 @@ object AppConfig {
       .mapError(new RuntimeException(_))
   }
 
-  val layerWithEnvVars: ZLayer[Any, Throwable, AppConfig] = {
-    ZLayer.fromZIO {
-      TypesafeConfigProvider
-        .fromResourcePath()
-        .load(desc)
-        .mapError(e => new RuntimeException(e.toString))
-    }
-  }
+//  val layerWithEnvVars: ZLayer[Any, Throwable, AppConfig] = {
+//    ZLayer.fromZIO {
+//      TypesafeConfigProvider
+//        .fromResourcePath()
+//        .load(desc)
+//        .mapError(e => new RuntimeException(e.toString))
+//    }
+//  }
 
   // optional convenience sub-layers
   val http: ZLayer[AppConfig, Nothing, HttpCfg] =
@@ -81,6 +82,9 @@ object AppConfig {
 
   val auth: ZLayer[AppConfig, Nothing, AuthCfg] =
     ZLayer.fromFunction((c: AppConfig) => c.auth)
+
+  val jwt: ZLayer[AppConfig, Nothing, JwtCfg] =
+    ZLayer.fromFunction((c: AppConfig) => c.auth.jwt)
 
   val logging: ZLayer[AppConfig, Nothing, LoggingCfg] =
     ZLayer.fromFunction((c: AppConfig) => c.logging)

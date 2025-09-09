@@ -1,7 +1,5 @@
 [[0minfo[0m] entering *experimental* thin client - BEEP WHIRR
 [[0minfo[0m] terminate the server with `shutdown`
 > http-server/compile
-[info] compiling 1 Scala source to /Users/martin/Aephyr/aephyr-dev/server/modules/shared/application/target/scala-3.3.6/classes ...[0J
-[0J[info] compiling 1 Scala source to /Users/martin/Aephyr/aephyr-dev/server/modules/http/server/target/scala-3.3.6/classes ...[0J
-[0J[[32msuccess[0m] Total time: 1 s, completed Sep 9, 2025, 7:48:09 AM
+[[32msuccess[0m] Total time: 3 s, completed Sep 9, 2025, 11:01:58 AM
 [0J

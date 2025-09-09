@@ -87,7 +87,14 @@ build target='choose':
 
   case {{target}} in
     choose)
-      x=$(gum choose "http-server" "http-apis")
+      x=$(gum choose \
+        "http-server" \
+        "http-apis" \
+        "adapters-db" \
+        "adapters-import" \
+        "adapters-messaging" \
+        "adapters-security" \
+      )
       target=$x/
       ;;
     all)

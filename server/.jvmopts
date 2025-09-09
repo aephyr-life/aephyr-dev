@@ -18,5 +18,5 @@
 -Dsbt.log.format=true
 -Dsbt.log.noformat=false
 
---sun-misc-unsafe-memory-access=allow
+# --sun-misc-unsafe-memory-access=allow
 --enable-native-access=ALL-UNNAMED

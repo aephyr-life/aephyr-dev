@@ -1,6 +1,6 @@
-// aephyr/http/server/security/AuthProblem.scala
 package aephyr.http.server.security
 
+import aephyr.identity.domain.auth.AuthError
 import aephyr.api.shared.Problem
 
 trait AuthErrorToProblem[E] {

@@ -1,27 +1,49 @@
 package aephyr.http.server.wiring
 
+import aephyr.adapters.security.jwt.NimbusJwtVerifier
+import aephyr.auth.ports.JwtVerifier
+import aephyr.identity.application.ports.UserReadPort
 import aephyr.http.server.app.identity.MeService
-import zio.*
-import aephyr.shared.config.{AasaCfg, AppConfig, DbCfg}
 import aephyr.http.server.endpoint.HttpTypes
 import aephyr.http.server.security.AuthService
 import aephyr.http.server.wiring.infra.InfraLayers
 import aephyr.http.server.wiring.identity.WebAuthnLayers
+import aephyr.shared.config.{AasaCfg, AppConfig, JwtCfg}
+import zio.*
 
 object HttpAppLayers {
-  type Env = HttpTypes.Env // = PublicEnv & IdentityEnv & SecurityEnv
+  type Env = HttpTypes.Env // PublicEnv & IdentityEnv & SecurityEnv
 
-  // Inputs per your graph (adjust if InfraLayers now takes only AppConfig)
-  private type In = DbCfg & AasaCfg & (AppConfig & Clock)
+  // JwtCfg -> Nimbus config
+  val nimbusCfgFromApp: ZLayer[JwtCfg, Nothing, NimbusJwtVerifier.Config] =
+    ZLayer.fromFunction((j: JwtCfg) =>
+      NimbusJwtVerifier.Config(j.issuer, j.audience, j.jwkSetJson)
+    )
 
+  // Build JwtVerifier from AppConfig + Clock
+  val jwtVerifierLayer: ZLayer[AppConfig & Clock, Nothing, JwtVerifier] =
+    (AppConfig.jwt >>> nimbusCfgFromApp) ++ ZLayer.service[Clock] >>> NimbusJwtVerifier.live
+
+  // 🔧 Inputs for whole app: Infra needs AppConfig; security needs AppConfig & Clock; public needs AasaCfg
+  private type In = AppConfig & AasaCfg & Clock
+
+  // Infra is built from AppConfig (NOT DbCfg)
+  private val infra: ZLayer[AppConfig, Throwable, InfraLayers.Env] =
+    InfraLayers.live
+
+  // Identity env: MeService from infra (provides UserReadPort), plus WebAuthn (needs AppConfig & Clock)
   private val identityLayers: ZLayer[In, Throwable, HttpTypes.IdentityEnv] =
-    (InfraLayers.live >>> MeService.live) ++
-      WebAuthnLayers.dev
+    (infra >>> MeService.live) ++ WebAuthnLayers.dev
 
-  private val publicAndSecurity: ZLayer[In, Throwable, HttpTypes.PublicEnv & HttpTypes.SecurityEnv] =
-    // pass-through AasaCfg AND provide AuthService together (no cycle)
-    (ZLayer.service[AasaCfg] ++ AuthService.live)
+  // Public env: just expose AASA config
+  private val publicLayers: ZLayer[In, Nothing, HttpTypes.PublicEnv] =
+    ZLayer.service[AasaCfg]
 
+  // Security env: AuthService needs JwtVerifier & UserReadPort
+  private val securityLayers: ZLayer[In, Throwable, HttpTypes.SecurityEnv] =
+    ((jwtVerifierLayer ++ (infra >>> ZLayer.service[UserReadPort])) >>> AuthService.live)
+
+  // Final assembly
   val dev: ZLayer[In, Throwable, Env] =
-    identityLayers ++ publicAndSecurity
+    identityLayers ++ publicLayers ++ securityLayers
 }

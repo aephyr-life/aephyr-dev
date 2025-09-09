@@ -28,10 +28,10 @@ object TapirDsl extends Tapir {
   val requestCtxIn: EndpointInput[RequestContext] =
     (traceIdIn and ipAddressIn and userAgentIn).mapTo[RequestContext]
 
-  val bearerIn: EndpointInput[Bearer] =
+  val bearerIn: EndpointInput[Option[Bearer]] =
     auth.bearer[String]()
       .description("Bearer access token")
-      .map(Bearer.apply)(_.value)
+      .map(s => Option.when(s.nonEmpty)(Bearer(s)))(_.map(_.value).getOrElse(""))
 
   val authCtxIn: EndpointInput[AuthenticationContext] =
     (bearerIn and requestCtxIn).mapTo[AuthenticationContext]
