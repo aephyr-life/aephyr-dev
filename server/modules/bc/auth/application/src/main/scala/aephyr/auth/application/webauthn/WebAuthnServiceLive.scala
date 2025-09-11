@@ -33,79 +33,11 @@ final class WebAuthnServiceLive(
   def beginRegistration(cmd: BeginRegCmd): IO[WebAuthnError, BeginRegResult] =
     for {
       uh <- ensureUserHandle(cmd.userId)
-      user = UserEntity(handle = uh, name = cmd.username, displayName = cmd.displayName)
-
-      // typed options + raw JSON that must be stored for finishRegistration()
-      tuple <- platform
-        .startRegistration(user, cmd.authenticatorSelection, cmd.attestation, cmd.excludeCredentials)
+      user = UserEntity(id = uh, name = cmd.username, displayName = cmd.displayName)
+      res <- platform.startRegistration(user)
         .mapError(e => WebAuthnError.Server(e.getMessage.option))
-      (options, platformJson) = tuple
-
-      txId <- tx.putReg(uh.bytes, platformJson)
-    } yield BeginRegResult(txId, options)
-
-  def finishRegistration(cmd: FinishRegCmd): IO[WebAuthnError, Unit] =
-    for {
-      tuple <- tx.getReg(cmd.tx).someOrFail(WebAuthnError.InvalidTx)
-      (uhBytes, reqJson) = tuple
-
-      // verify using typed response
-      tuple <- platform
-        .finishRegistration(reqJson, cmd.response)
-        .mapError(e => WebAuthnError.Server(e.getMessage.option))
-      (credId, pkCose, signCount, handle) = tuple
-
-      userId <- handles
-        .findByHandle(handle)
-        .mapError(e => WebAuthnError.Server(e.getMessage.option))
-        .someOrFail(WebAuthnError.Server("no user for handle"))
-
-      now <- clock.instant
-      cred = Credential(
-        id = java.util.UUID.randomUUID().nn,
-        userId = userId,
-        credentialId = credId.bytes,
-        publicKeyCose = pkCose.bytes,
-        signCount = signCount,
-        userHandleBytes = uhBytes,
-        uvRequired = false,
-        transports = Nil,
-        label = cmd.label,
-        createdAt = now,
-        updatedAt = now,
-        lastUsedAt = None
-      )
-
-      _ <- repo.insert(cred).mapError(e => WebAuthnError.Server(e.getMessage.option))
-      _ <- tx.delReg(cmd.tx).ignore
-    } yield ()
-
-  // ---------- Authentication ----------
-
-  def beginAuthentication(cmd: BeginAuthCmd): IO[WebAuthnError, BeginAuthResult] =
-    for {
-      tuple <- platform
-        .startAssertion(cmd.userVerification, cmd.allowCredentials)
-        .mapError(e => WebAuthnError.Server(e.getMessage.option))
-      (options, platformJson) = tuple
-
-      txId <- tx.putAuth(platformJson)
-    } yield BeginAuthResult(txId, options)
-
-  def finishAuthentication(cmd: FinishAuthCmd): IO[WebAuthnError, Unit] =
-    for {
-      reqJson <- tx.getAuth(cmd.tx).someOrFail(WebAuthnError.InvalidTx)
-
-      tuple <- platform
-        .finishAssertion(reqJson, cmd.response)
-        .mapError(e => WebAuthnError.Server(e.getMessage.option))
-      (credId, newCount) = tuple
-
-      _ <- repo
-        .updateSignCount(credId.bytes.toArray, newCount)
-        .mapError(e => WebAuthnError.Server(e.getMessage.option))
-      _ <- tx.delAuth(cmd.tx).ignore
-    } yield ()
+      txId <- tx.putReg(uh.bytes, res.serverJson)
+    } yield BeginRegResult(txId, res.clientJson)
 }
 
 object WebAuthnServiceLive {

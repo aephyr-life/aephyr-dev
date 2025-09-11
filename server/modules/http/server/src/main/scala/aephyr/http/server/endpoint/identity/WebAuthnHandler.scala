@@ -1,33 +1,33 @@
 package aephyr.http.server.endpoint.identity
 
-import aephyr.api.shared.Problem
 import aephyr.auth.application.webauthn.WebAuthnService
-import aephyr.auth.application.webauthn.WebAuthnService.{BeginRegCmd, BeginRegResult}
-import aephyr.auth.domain
-import aephyr.http.apis.endpoints.v0.auth.webauthn.model.{Attestation, AuthenticatorSelection, CredDescriptor, PubKeyCredParam, RpEntity, UserEntity}
-import aephyr.http.apis.endpoints.v0.auth.webauthn.{BeginRegInput, BeginRegOutput, WebAuthnApi, WebAuthnErrorDto, model}
+import aephyr.http.apis.endpoints.v0.auth.webauthn.{BeginRegOutput, WebAuthnApi}
+import aephyr.http.apis.types.RawJson
 import sttp.tapir.ztapir.*
 import aephyr.http.server.endpoint.HttpTypes.*
-import aephyr.http.server.endpoint.identity.WebAuthnHandler.beginRegCmd
 import aephyr.http.server.mapping.webauthn.WebAuthnDtoMapper
-import aephyr.http.server.security.AuthService
-import aephyr.kernel.codec.Base64UrlCodec
-import aephyr.kernel.id.UserId
-import aephyr.kernel.types.Base64Url
-import zio.{IO, ZIO}
-import aephyr.kernel.types.Base64Url.*
+import com.github.plokhotnyuk.jsoniter_scala.core.{JsonValueCodec, readFromString}
+import com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker
 
 object WebAuthnHandler {
 
   private type WebAuthnEnv = WebAuthnService
-  
+
+  final case class Top(publicKey: Option[RawJson] = None)
+
+  given JsonValueCodec[Top] = JsonCodecMaker.make
+
+  def publicKeyRawFrom(clientJson: String): RawJson = {
+    val top = readFromString[Top](clientJson)
+    top.publicKey.getOrElse(RawJson(clientJson))
+  }
+
   val registrationOptions: ZSE[WebAuthnEnv] =
     WebAuthnApi.registrationOptions.zServerLogic { in =>
      for {
        cmd <- WebAuthnDtoMapper.beginRegCmd(in)
        reg <- WebAuthnService.beginRegistration(cmd).mapError(WebAuthnDtoMapper.toProblem)
-       res <- WebAuthnDtoMapper.beginRegOut(reg)
-     } yield res
+     } yield BeginRegOutput(reg.tx, publicKeyRawFrom(reg.clientJson))
     }
 
   // POST /api/.../registration/options
@@ -83,5 +83,5 @@ object WebAuthnHandler {
   //      }
 
   val serverEndpoints: List[ZServerEndpoint[WebAuthnEnv, Caps]] =
-    List()
+    List(registrationOptions)
 }
