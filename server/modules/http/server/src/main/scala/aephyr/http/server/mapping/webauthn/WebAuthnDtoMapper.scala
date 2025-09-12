@@ -14,8 +14,7 @@ import aephyr.http.apis.endpoints.v0.auth.webauthn.{
 object WebAuthnDtoMapper {
 
   // ---------- API -> Domain --------------------------------------------------
-
-
+  
   def beginRegCmd(in: DBeginRegInput): IO[Problem[ApiErr], BeginRegCmd] =
     ZIO.fromEither(UserId.fromString(in.userId))
       .mapError(_ => Problem(ApiErr.InvalidChallenge))

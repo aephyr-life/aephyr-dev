@@ -17,15 +17,13 @@ final class WebAuthnPlatformYubico(rp: RelyingParty) extends WebAuthnPlatform:
   override def startRegistration(user: UserEntity): IO[Throwable, StartRegistrationResult] =
     ZIO.attempt {
       val sel = AuthenticatorSelectionCriteria.builder()
-        .userVerification(UserVerificationRequirement.REQUIRED) // always require UV
-        .residentKey(ResidentKeyRequirement.PREFERRED) // prefer passkeys
+        .userVerification(UserVerificationRequirement.REQUIRED)
+        .residentKey(ResidentKeyRequirement.PREFERRED)
         .build()
 
       val sro = StartRegistrationOptions.builder()
         .user(toYUser(user))
-        .authenticatorSelection(sel) // global default
-        // .extensions(RegistrationExtensionInputs.builder().credProps().build()) // if always wanted
-        // .timeout(60_000L)                 // if you want a global timeout
+        .authenticatorSelection(sel)
         .build()
 
       val opts = rp.startRegistration(sro)

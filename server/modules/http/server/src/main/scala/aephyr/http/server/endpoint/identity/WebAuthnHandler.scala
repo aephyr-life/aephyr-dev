@@ -25,28 +25,9 @@ object WebAuthnHandler {
   val registrationOptions: ZSE[WebAuthnEnv] =
     WebAuthnApi.registrationOptions.zServerLogic { in =>
      for {
-       cmd <- WebAuthnDtoMapper.beginRegCmd(in)
-       reg <- WebAuthnService.beginRegistration(cmd).mapError(WebAuthnDtoMapper.toProblem)
+       reg <- WebAuthnService.registrationOptions().mapError(WebAuthnDtoMapper.toProblem)
      } yield BeginRegOutput(reg.tx, publicKeyRawFrom(reg.clientJson))
     }
-
-  // POST /api/.../registration/options
-  //    val beginRegEp: ZServerEndpoint[Env, ZioStreams & WebSockets] =
-  //      eBeginReg.zServerLogic { in =>
-  //        val cmd = BeginRegCmd(
-  //          userId = User.Id(UUID.fromString(in.userId)),
-  //          username = in.username,
-  //          displayName = in.displayName,
-  //          authenticatorSelection = in.authenticatorSelection,
-  //          attestation = in.attestation.getOrElse(AttestationConveyance.None),
-  //          excludeCredentials = in.excludeCredentials.getOrElse(Nil)
-  //        )
-  //
-  //        WebAuthnService
-  //          .beginRegistration(cmd)
-  //          .map(res => BeginRegOutput(optionsJson = res.optionsJson, tx = res.tx))
-  //          .mapError(toProblem)
-  //      }
 
   // POST /api/.../registration/verify
   //    val finishRegEp: ZServerEndpoint[Env, ZioStreams & WebSockets] =

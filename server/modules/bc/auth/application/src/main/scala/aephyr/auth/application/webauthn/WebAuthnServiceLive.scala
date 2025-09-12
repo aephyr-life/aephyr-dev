@@ -30,10 +30,13 @@ final class WebAuthnServiceLive(
 
   // ---------- Registration ----------
 
-  def beginRegistration(cmd: BeginRegCmd): IO[WebAuthnError, BeginRegResult] =
+  def registrationOptions(): IO[WebAuthnError, BeginRegResult] =
     for {
-      uh <- ensureUserHandle(cmd.userId)
-      user = UserEntity(id = uh, name = cmd.username, displayName = cmd.displayName)
+      provisionalUserId <- ZIO.succeed(UserId.random)
+      uh <- ensureUserHandle(provisionalUserId)
+      username <- ZIO.succeed(s"user-${provisionalUserId.value.toString.take(8)}")
+      displayName <- ZIO.succeed("New User")
+      user = UserEntity(id = uh, name = username, displayName = displayName)
       res <- platform.startRegistration(user)
         .mapError(e => WebAuthnError.Server(e.getMessage.option))
       txId <- tx.putReg(uh.bytes, res.serverJson)

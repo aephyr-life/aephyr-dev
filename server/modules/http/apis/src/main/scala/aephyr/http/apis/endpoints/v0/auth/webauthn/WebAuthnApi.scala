@@ -8,13 +8,18 @@ object WebAuthnApi {
 
   private val webauthn = base[WebAuthnErrorDto].in("webauthn")
 
-  val registrationOptions: PublicEndpoint[BeginRegInput, Problem[WebAuthnErrorDto], BeginRegOutput, Any] =
+  val registrationOptions: PublicEndpoint[Unit, Problem[WebAuthnErrorDto], BeginRegOutput, Any] =
     webauthn
       .post
       .in("registration" / "options")
-      .in(jsonIn[BeginRegInput])
       .out(jsonOut[BeginRegOutput])
-
+  
+  val registrationVerify: PublicEndpoint[VerifyRegInput, Problem[WebAuthnErrorDto], JwtOut, Any] =
+    webauthn
+      .post
+      .in("registratin" / "verify")
+      .in(jsonIn[VerifyRegInput])
+      .out(jsonOut[JwtOut])
 //  val eFinishReg: PublicEndpoint[FinishRegInput, Problem[WebAuthnError], StatusCode, Any] =
 //    webauthn
 //      .post

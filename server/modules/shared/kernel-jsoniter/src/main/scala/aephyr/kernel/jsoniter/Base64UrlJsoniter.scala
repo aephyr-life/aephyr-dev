@@ -4,7 +4,6 @@ import scala.language.unsafeNulls
 
 import aephyr.kernel.types.Base64Url
 import com.github.plokhotnyuk.jsoniter_scala.core.*
-import com.github.plokhotnyuk.jsoniter_scala.macros.*
 
 given base64UrlJsonValueCodec: JsonValueCodec[Base64Url] =
   new JsonValueCodec[Base64Url] {

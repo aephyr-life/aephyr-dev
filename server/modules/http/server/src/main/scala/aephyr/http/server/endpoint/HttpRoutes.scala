@@ -23,13 +23,21 @@ object HttpRoutes {
   private val publicZseEnv: List[ZSE[Env]]   = HttpHandler.public.map(_.widen[Env])
   private val identityZseEnv: List[ZSE[Env]] = HttpHandler.identity.map(_.widen[Env])
 
-  private val publicRoutes: Routes[Env, Response]   = interpreter.toHttp(publicZseEnv)
-  private val identityRoutes: Routes[Env, Response] = interpreter.toHttp(identityZseEnv)
+  private val publicRoutes: Routes[Env, Response] = {
+    publicZseEnv.foreach(e => println(e.endpoint.show)) // TODO document elsewhere
+    interpreter.toHttp(publicZseEnv)
+  }
+
+  private val identityRoutes: Routes[Env, Response] =
+    identityZseEnv.foreach(e => println(e.endpoint.show)) // TODO document elsewhere
+    interpreter.toHttp(identityZseEnv)
 
   // 4) Docs (these need Any)
   private val docsRoutes: Routes[Any, Response] = {
     val plain = HttpHandler.documented.map(_.endpoint) ++ HttpHandler.identity.map(_.endpoint)
-    interpreter.toHttp(DocsHandler.fromEndpoints(plain))
+    val ep = DocsHandler.fromEndpoints(plain)
+    ep.foreach(e => println(e.endpoint.show)) // TODO document elsewhere
+    interpreter.toHttp(ep)
   }
 
   // 5) Combine. Cast docs (Any) to Env is safe: it needs nothing.

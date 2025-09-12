@@ -2,13 +2,11 @@ package aephyr.auth.application.webauthn
 
 import aephyr.auth.domain.webauthn.*
 
-import aephyr.kernel.id.UserId
-
 trait WebAuthnService {
   import zio.IO
   import WebAuthnService.*
 
-  def beginRegistration(cmd: BeginRegCmd): IO[WebAuthnError, BeginRegResult]
+  def registrationOptions(): IO[WebAuthnError, BeginRegResult]
 //  def finishRegistration(cmd: FinishRegCmd): IO[WebAuthnError, Unit]
 //
 //  def beginAuthentication(cmd: BeginAuthCmd): IO[WebAuthnError, BeginAuthResult]
@@ -17,25 +15,16 @@ trait WebAuthnService {
 
 object WebAuthnService {
 
-  // ---------- Commands ----------
-  final case class BeginRegCmd(
-    userId: UserId,
-    username: String,
-    displayName: String
-  )
-
   // ---------- Results ----------
   final case class BeginRegResult(
     tx: String,
     clientJson: String
   )
-
- 
-
+  
   import zio.ZIO
 
-  def beginRegistration(cmd: BeginRegCmd): ZIO[WebAuthnService, WebAuthnError, BeginRegResult] =
-    ZIO.serviceWithZIO[WebAuthnService](_.beginRegistration(cmd))
+  def registrationOptions(): ZIO[WebAuthnService, WebAuthnError, BeginRegResult] =
+    ZIO.serviceWithZIO[WebAuthnService](_.registrationOptions())
 
 //  def finishRegistration(cmd: FinishRegCmd): ZIO[WebAuthnService, WebAuthnError, Unit] =
 //    ZIO.serviceWithZIO[WebAuthnService](_.finishRegistration(cmd))
