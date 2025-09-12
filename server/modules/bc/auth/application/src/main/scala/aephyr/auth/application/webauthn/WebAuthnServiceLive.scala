@@ -1,13 +1,13 @@
 package aephyr.auth.application.webauthn
 
 import zio.*
-import aephyr.auth.domain.UserHandle
-import aephyr.auth.domain.Credential
+import aephyr.auth.domain.{AuthTx, Credential, UserHandle}
 import aephyr.auth.domain.webauthn.*
 import aephyr.auth.ports.*
 import aephyr.kernel.id.UserId
 import WebAuthnService.*
 import aephyr.kernel.ObjectOps.*
+import java.time.Instant
 
 final class WebAuthnServiceLive(
                                  platform: WebAuthnPlatform,
@@ -16,6 +16,9 @@ final class WebAuthnServiceLive(
                                  repo: WebAuthnRepo,
                                  clock: Clock
                                ) extends WebAuthnService {
+
+  private inline def msg(th: Throwable): Option[String] =
+    Option(th.getMessage).map(_.nn)
 
   private def ensureUserHandle(userId: UserId): IO[WebAuthnError, UserHandle] =
     handles.get(userId).mapError(e => WebAuthnError.Server(e.getMessage.option)).flatMap {
@@ -41,6 +44,48 @@ final class WebAuthnServiceLive(
         .mapError(e => WebAuthnError.Server(e.getMessage.option))
       txId <- tx.putReg(uh.bytes, res.serverJson)
     } yield BeginRegResult(txId, res.clientJson)
+
+  import aephyr.kernel.types.Bytes
+  import java.time.Instant
+
+  override def registrationVerify(
+                                   authTx: AuthTx,
+                                   json: String
+                                 ): IO[WebAuthnError, RegistrationVerified] =
+    tx.getReg(authTx)
+      .someOrFail(WebAuthnError.InvalidTx) // IO[InvalidTx.type, (Bytes, String)]
+      .mapError(identity[WebAuthnError]) // widen to IO[WebAuthnError, ...]
+      .flatMap { case (uhBytes: Bytes, creationJson: String) =>
+        for {
+          userId <- handles
+            .findByHandle(UserHandle(uhBytes.toArray))
+            .mapError(e => WebAuthnError.Server(e.getMessage.option))     // Throwable -> WebAuthnError
+            .someOrFail(WebAuthnError.Server(Some("user_handle_unmapped")))
+
+          fin <- platform
+            .finishRegistration(creationJson, json)
+            .mapError(th => WebAuthnError.Server(msg(th)))
+
+          now = Instant.now().nn
+          cred = Credential(
+            id = java.util.UUID.randomUUID().nn,
+            userId = userId,
+            credentialId = fin.credentialId,
+            publicKeyCose = fin.publicKeyCose,
+            signCount = fin.signCount,
+            userHandleBytes = uhBytes,
+            uvRequired = false,
+            transports = fin.transports,
+            label = None,
+            createdAt = now,
+            updatedAt = now,
+            lastUsedAt = None
+          )
+
+          _ <- repo.insert(cred).mapError(th => WebAuthnError.Server(msg(th)))
+          _ <- tx.delReg(authTx).ignore
+        } yield RegistrationVerified(userId = userId)
+      }
 }
 
 object WebAuthnServiceLive {

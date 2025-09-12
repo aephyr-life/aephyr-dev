@@ -1,17 +1,17 @@
 package aephyr.http.server.endpoint.identity
 
 import aephyr.auth.application.webauthn.WebAuthnService
-import aephyr.http.apis.endpoints.v0.auth.webauthn.{BeginRegOutput, WebAuthnApi}
+import aephyr.auth.ports.JwtIssuer
+import aephyr.http.apis.endpoints.v0.auth.webauthn.{BeginRegOutput, JwtOut, WebAuthnApi}
 import aephyr.http.apis.types.RawJson
 import sttp.tapir.ztapir.*
 import aephyr.http.server.endpoint.HttpTypes.*
 import aephyr.http.server.mapping.webauthn.WebAuthnDtoMapper
+import aephyr.http.server.wiring.identity.WebAuthnLayers
 import com.github.plokhotnyuk.jsoniter_scala.core.{JsonValueCodec, readFromString}
 import com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker
 
 object WebAuthnHandler {
-
-  private type WebAuthnEnv = WebAuthnService
 
   final case class Top(publicKey: Option[RawJson] = None)
 
@@ -22,11 +22,23 @@ object WebAuthnHandler {
     top.publicKey.getOrElse(RawJson(clientJson))
   }
 
-  val registrationOptions: ZSE[WebAuthnEnv] =
+  val registrationOptions: ZSE[WebAuthnLayers.Env] =
     WebAuthnApi.registrationOptions.zServerLogic { in =>
      for {
        reg <- WebAuthnService.registrationOptions().mapError(WebAuthnDtoMapper.toProblem)
      } yield BeginRegOutput(reg.tx, publicKeyRawFrom(reg.clientJson))
+    }
+
+  val registrationVerify: ZSE[WebAuthnLayers.Env] =
+    WebAuthnApi.registrationVerify.zServerLogic {
+      case (tx, json) =>
+        val jsonString = json.value
+        for {
+          verified <- WebAuthnService.registrationVerify(tx, jsonString).mapError(WebAuthnDtoMapper.toProblem)
+          roles     = Set.empty[String]
+          tuple <- JwtIssuer.mintAccess(verified.userId, roles)
+          (token, ttlSeconds) = tuple
+        } yield JwtOut(token, "Bearer", ttlSeconds)
     }
 
   // POST /api/.../registration/verify
@@ -63,6 +75,6 @@ object WebAuthnHandler {
   //          .mapError(toProblem)
   //      }
 
-  val serverEndpoints: List[ZServerEndpoint[WebAuthnEnv, Caps]] =
-    List(registrationOptions)
+  val serverEndpoints: List[ZSE[WebAuthnLayers.Env]] =
+    List(registrationOptions, registrationVerify)
 }

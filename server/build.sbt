@@ -225,7 +225,7 @@ lazy val adaptersSecurity = mod("adapters/security", "adapters-security")
 
 // -------- APIs
 lazy val httpApis = mod("http/apis", "http-apis")
-  .dependsOn(kernel, kernelJsoniter, kernelTapir, sharedSecurity)
+  .dependsOn(kernel, kernelJsoniter, kernelTapir, sharedSecurity, authDomain)
   .settings(
     libraryDependencies ++= prod(
       Libs.sttpModel,

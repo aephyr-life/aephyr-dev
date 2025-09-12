@@ -2,10 +2,21 @@ package aephyr.auth.ports
 
 import zio.IO
 import aephyr.auth.domain.webauthn.*
+import aephyr.auth.ports.WebAuthnPlatform.FinishedRegistration
+import aephyr.kernel.types.Bytes
+
+import java.util.UUID
 
 trait WebAuthnPlatform {
 
-  def startRegistration(user: UserEntity): IO[Throwable, StartRegistrationResult]
+  def startRegistration(
+    user: UserEntity
+  ): IO[Throwable, StartRegistrationResult]
+
+  def finishRegistration(
+    requestJson: String, // the exact creationOptions JSON you stored (aka serverJson)
+    responseJson: String // the raw PublicKeyCredential JSON from the client
+  ): IO[Throwable, FinishedRegistration]
 
 //  def finishRegistration(
 //                          requestJson: String,
@@ -21,4 +32,14 @@ trait WebAuthnPlatform {
 //                       requestJson: String,
 //                       response: AssertionResponse
 //                     ): IO[Throwable, (CredentialId, Long)]
+}
+
+object WebAuthnPlatform {
+  final case class FinishedRegistration(
+    credentialId: Bytes, // credentialId bytes
+    publicKeyCose: Bytes, // COSE-encoded public key
+    signCount: Long,
+    aaguid: Option[UUID],
+    transports: List[String]
+  )
 }

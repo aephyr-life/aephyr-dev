@@ -2,6 +2,10 @@ package aephyr.http.apis.endpoints.v0.auth.webauthn
 
 import aephyr.api.shared.Problem
 import aephyr.api.TapirDsl.*
+import aephyr.auth.domain.AuthTx
+import aephyr.http.apis.types.RawJson
+import aephyr.http.apis.types.AuthTxCodecs.given
+import sttp.model.StatusCode
 import sttp.tapir.PublicEndpoint
 
 object WebAuthnApi {
@@ -13,19 +17,14 @@ object WebAuthnApi {
       .post
       .in("registration" / "options")
       .out(jsonOut[BeginRegOutput])
-  
-  val registrationVerify: PublicEndpoint[VerifyRegInput, Problem[WebAuthnErrorDto], JwtOut, Any] =
+
+  val registrationVerify: PublicEndpoint[(AuthTx, RawJson), Problem[WebAuthnErrorDto], JwtOut, Any] =
     webauthn
       .post
-      .in("registratin" / "verify")
-      .in(jsonIn[VerifyRegInput])
+      .in("registration" / path[AuthTx] / "verify")
+      .in(jsonIn[RawJson])
+      .out(statusCode(StatusCode.Created))
       .out(jsonOut[JwtOut])
-//  val eFinishReg: PublicEndpoint[FinishRegInput, Problem[WebAuthnError], StatusCode, Any] =
-//    webauthn
-//      .post
-//      .in("registration" / "verify")
-//      .in(jsonIn[FinishRegInput])
-//      .out(statusCode)
 
 //  val eBeginAuth: PublicEndpoint[BeginAuthInput, Problem[WebAuthnError], BeginAuthOutput, Any] =
 //    webauthn

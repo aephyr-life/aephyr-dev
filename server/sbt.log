@@ -1,5 +1,5 @@
 [[0minfo[0m] entering *experimental* thin client - BEEP WHIRR
 [[0minfo[0m] terminate the server with `shutdown`
-> http-apis/compile
-[[32msuccess[0m] Total time: 1 s, completed Sep 12, 2025, 2:47:11 PM
+> root/compile
+[[32msuccess[0m] Total time: 1 s, completed Sep 12, 2025, 8:33:09 PM
 [0J
