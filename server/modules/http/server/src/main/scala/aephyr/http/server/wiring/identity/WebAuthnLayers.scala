@@ -7,6 +7,7 @@ import aephyr.adapters.security.webauthn.yubico.WebAuthnPlatformYubico
 import aephyr.auth.application.webauthn.{WebAuthnService, WebAuthnServiceLive}
 import aephyr.auth.ports.JwtIssuer
 import aephyr.http.server.endpoint.HttpTypes
+import aephyr.http.server.wiring.infra.InMemoryUserRepo
 import zio.*
 
 object WebAuthnLayers {
@@ -16,6 +17,7 @@ object WebAuthnLayers {
   // Choose impls per profile; start with in-memory for dev
   val dev: ZLayer[In, Throwable, HttpTypes.WebAuthnEnv] =
     ZLayer.makeSome[In, HttpTypes.WebAuthnEnv](
+      InMemoryUserRepo.live,
       InMemoryUserHandleRepo.live,
       InMemoryWebAuthnRepo.live,
       InMemoryChallengeStore.live(),

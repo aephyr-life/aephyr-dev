@@ -23,7 +23,7 @@ object AuthService {
             v     <- verifier.verifyAccess(token)
             user  <- users
                         .findById(v.userId)
-                        .mapError(_ => AuthError.InvalidToken)
+                        .mapError(AuthError.NotAvailable.apply)
                         .someOrFail(AuthError.UserNotFound)
             _     <- ZIO.fail(AuthError.UserDisabled)
                         .when(user.status != User.Status.Active)

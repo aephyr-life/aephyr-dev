@@ -7,4 +7,5 @@ enum AuthError derives CanEqual:
   case TokenExpired
   case UserDisabled
   case UserNotFound
+  case NotAvailable(cause: Throwable)
   case Internal(cause: Throwable)

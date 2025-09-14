@@ -1,27 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>WebAuthn Test Page</title>
+    <meta charset="utf-8" />
+    <title>WebAuthn Test Page</title>
+    <style>
+        body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.4; margin: 2rem; }
+        pre { background: #111; color: #ddd; padding: 1rem; border-radius: 8px; overflow:auto; }
+        .row { display:flex; gap:.5rem; align-items:center; margin:.5rem 0 1rem; flex-wrap: wrap; }
+        button { padding:.5rem .8rem; font-size: 1rem; cursor:pointer; }
+        .pill { display:inline-block; padding:.15rem .5rem; border-radius:999px; background:#eee; color:#333; font-size:.85rem; }
+    </style>
 </head>
 <body>
-  <h1>WebAuthn Test</h1>
+<h1>WebAuthn Test <span id="status" class="pill">no token</span></h1>
 
-  <div>
-    <label>User ID (UUID): <input id="userId" size="40" value="00000000-0000-0000-0000-000000000001"></label><br>
-    <label>Username: <input id="username" value="martin"></label><br>
-    <label>Display name: <input id="displayName" value="Martin"></label><br>
+<div class="row">
     <button onclick="beginRegistration()">Begin Registration</button>
     <button onclick="beginAuthentication()">Begin Authentication</button>
-  </div>
+    <button onclick="callMe()">Call /api/me</button>
+</div>
 
-  <pre id="log"></pre>
+<pre id="log"></pre>
 
-  <script>
+<script>
     const API_BASE = "https://dev.aephyr.life/api/webauthn";
+    const API_ME   = "https://dev.aephyr.life/api/me";
+
+    const state = { token: null };
+
+    function setToken(t) {
+      state.token = t || null;
+      document.getElementById('status').textContent = state.token ? 'token set' : 'no token';
+    }
 
     function log(...args) {
-      document.getElementById('log').textContent += args.join(" ") + "\n";
+      const line = args.map(x => (typeof x === 'object' ? JSON.stringify(x) : String(x))).join(' ');
+      document.getElementById('log').textContent += line + "\n";
       console.log(...args);
     }
 
@@ -43,107 +57,129 @@
     }
 
     async function beginRegistration() {
-      const userId   = document.getElementById('userId').value;
-      const username = document.getElementById('username').value;
-      const display  = document.getElementById('displayName').value;
+      try {
+        // 1) options (POST, no body, no Content-Type)
+        const resp = await fetch(`${API_BASE}/registration/options`, { method: "POST" });
+        const { tx, publicKey } = await resp.json();
+        log("BeginReg options:", { tx, publicKey });
 
-      // 1. ask server for options
-      const resp = await fetch(`${API_BASE}/registration/options`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ userId, username, displayName: display })
-      });
-      const { tx, publicKey } = await resp.json();
-      log("BeginReg options:", publicKey, "tx:", tx);
+        // 2) decode
+        publicKey.challenge = b64UrlToBytes(publicKey.challenge);
+        publicKey.user.id   = b64UrlToBytes(publicKey.user.id);
+        if (publicKey.excludeCredentials) {
+          publicKey.excludeCredentials = publicKey.excludeCredentials.map(c => ({ ...c, id: b64UrlToBytes(c.id) }));
+        }
 
-      // 2. decode binary fields
-      publicKey.challenge = b64UrlToBytes(publicKey.challenge);
-      publicKey.user.id   = b64UrlToBytes(publicKey.user.id);
-      if (publicKey.excludeCredentials) {
-        publicKey.excludeCredentials = publicKey.excludeCredentials.map(c => ({
-          ...c,
-          id: b64UrlToBytes(c.id)
-        }));
+        // 3) create credential
+        const cred = await navigator.credentials.create({ publicKey });
+        log("Created credential:", cred);
+
+        // 4) payload
+        const payload = cred.toJSON ? cred.toJSON() : {
+          id: cred.id,
+          rawId: bufToB64Url(cred.rawId),
+          type: cred.type,
+          response: {
+            clientDataJSON:    bufToB64Url(cred.response.clientDataJSON),
+            attestationObject: bufToB64Url(cred.response.attestationObject)
+          },
+          clientExtensionResults: cred.getClientExtensionResults?.() ?? {}
+        };
+
+        // 5) verify -> token
+        const verify = await fetch(`${API_BASE}/registration/${tx}/verify`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload)
+        });
+
+        const body = await verify.json().catch(async () => ({ raw: await verify.text() }));
+        log("FinishReg status:", verify.status, body);
+
+        const token = body?.accessToken;
+        if (token) {
+          setToken(token);
+          await callMe(); // call /me immediately
+        } else {
+          log("❌ No accessToken in response.");
+        }
+      } catch (e) {
+        log("❌ beginRegistration error:", e?.message || e);
       }
-
-      // 3. create credential
-      const cred = await navigator.credentials.create({ publicKey });
-      log("Created credential:", cred);
-
-      // 4. send attestation to server
-      const clientDataJSON    = bufToB64Url(cred.response.clientDataJSON);
-      const attestationObject = bufToB64Url(cred.response.attestationObject);
-      const rawId             = bufToB64Url(cred.rawId);
-
-      const responseJson = JSON.stringify({
-        id: cred.id,
-        rawId,
-        type: cred.type,
-        response: { clientDataJSON, attestationObject },
-        clientExtensionResults: cred.getClientExtensionResults()
-      });
-
-      const verify = await fetch(`${API_BASE}/registration/verify`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ tx, responseJson })
-      });
-      log("FinishReg status:", verify.status);
     }
 
     async function beginAuthentication() {
-      const username = document.getElementById('username').value;
+      try {
+        // 1) options (POST, no body, no Content-Type)
+        const resp = await fetch(`${API_BASE}/authentication/options`, { method: "POST" });
+        const { publicKey, tx } = await resp.json();
+        log("BeginAuth options:", { tx, publicKey });
 
-      // 1. ask server for options
-      const resp = await fetch(`${API_BASE}/authentication/options`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ username })
-      });
-      const { publicKey, tx } = await resp.json();
-      log("BeginAuth options:", publicKey, "tx:", tx);
+        // 2) decode
+        publicKey.challenge = b64UrlToBytes(publicKey.challenge);
+        if (publicKey.allowCredentials) {
+          publicKey.allowCredentials = publicKey.allowCredentials.map(c => ({ ...c, id: b64UrlToBytes(c.id) }));
+        }
 
-      // 2. decode binary fields
-      publicKey.challenge = b64UrlToBytes(publicKey.challenge);
-      if (publicKey.allowCredentials) {
-        publicKey.allowCredentials = publicKey.allowCredentials.map(c => ({
-          ...c,
-          id: b64UrlToBytes(c.id)
-        }));
-      }
+        // 3) get assertion
+        const assertion = await navigator.credentials.get({ publicKey });
+        log("Got assertion:", assertion);
 
-      // 3. get assertion
-      const assertion = await navigator.credentials.get({ publicKey });
-      log("Got assertion:", assertion);
+        // 4) payload
+        const payload = assertion.toJSON ? assertion.toJSON() : {
+          id: assertion.id,
+          rawId: bufToB64Url(assertion.rawId),
+          type: assertion.type,
+          response: {
+            clientDataJSON:    bufToB64Url(assertion.response.clientDataJSON),
+            authenticatorData: bufToB64Url(assertion.response.authenticatorData),
+            signature:         bufToB64Url(assertion.response.signature),
+            userHandle:        assertion.response.userHandle ? bufToB64Url(assertion.response.userHandle) : null
+          },
+          clientExtensionResults: assertion.getClientExtensionResults?.() ?? {}
+        };
 
-      // 4. send to server
-      const clientDataJSON = bufToB64Url(assertion.response.clientDataJSON);
-      const authenticatorData = bufToB64Url(assertion.response.authenticatorData);
-      const signature = bufToB64Url(assertion.response.signature);
-      const userHandle = assertion.response.userHandle ? bufToB64Url(assertion.response.userHandle) : null;
-      const rawId = bufToB64Url(assertion.rawId);
+        // 5) verify -> token
+        const verify = await fetch(`${API_BASE}/authentication/verify`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ tx, responseJson: JSON.stringify(payload) })
+        });
 
-      const responseJson = JSON.stringify({
-        id: assertion.id,
-        rawId,
-        type: assertion.type,
-        response: { clientDataJSON, authenticatorData, signature, userHandle },
-        clientExtensionResults: assertion.getClientExtensionResults()
-      });
+        const body = await verify.json().catch(async () => ({ raw: await verify.text() }));
+        log("FinishAuth status:", verify.status, body);
 
-      const verify = await fetch(`${API_BASE}/authentication/verify`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ tx, responseJson })
-      });
-      if (!verify.ok) {
-        const err = await verify.text().catch(() => "(no body)");
-        console.error("finishAuth error:", verify.status, err);
-        log("FinishAuth status:", verify.status, "err:", err);
-      } else {
-        log("FinishAuth status:", verify.status);
+        const token = body?.accessToken;
+        if (token) {
+          setToken(token);
+          await callMe(); // call /me immediately
+        } else {
+          log("❌ No accessToken in auth response.");
+        }
+      } catch (e) {
+        log("❌ beginAuthentication error:", e?.message || e);
       }
     }
-  </script>
+
+    async function callMe() {
+      try {
+        if (!state.token) {
+          log("ℹ️ No token set. Run registration/auth first.");
+          return;
+        }
+        const r = await fetch(API_ME, {
+          headers: {
+            "Authorization": `Bearer ${state.token}`,
+            "Accept": "application/json"
+          }
+        });
+
+        const text = await r.text();
+        log(`GET /api/me status: ${r.status}`, text);
+      } catch (e) {
+        log("❌ /api/me error:", e?.message || e);
+      }
+    }
+</script>
 </body>
 </html>

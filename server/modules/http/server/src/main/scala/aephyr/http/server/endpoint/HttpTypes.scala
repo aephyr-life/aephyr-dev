@@ -4,6 +4,7 @@ import aephyr.http.server.app.identity.MeService
 import aephyr.auth.application.webauthn.WebAuthnService
 import aephyr.auth.ports.JwtIssuer
 import aephyr.http.server.security.AuthService
+import aephyr.identity.application.ports.UserWritePort
 import aephyr.shared.config.AasaCfg
 import sttp.capabilities.zio.ZioStreams
 import sttp.capabilities.WebSockets
@@ -15,7 +16,7 @@ object HttpTypes {
 
   // Feature/env atoms
   type MeEnv           = MeService
-  type WebAuthnEnv     = WebAuthnService & JwtIssuer
+  type WebAuthnEnv     = WebAuthnService & JwtIssuer & UserWritePort
   type SecurityEnv     = AuthService
   type OpsHandlerEnv   = Any
   type WellKnownEnv    = AasaCfg

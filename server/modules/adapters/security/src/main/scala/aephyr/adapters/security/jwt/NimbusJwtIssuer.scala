@@ -8,6 +8,7 @@ import com.nimbusds.jose.crypto.MACSigner
 import com.nimbusds.jwt.{JWTClaimsSet, SignedJWT}
 
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.util.Date
 import scala.jdk.CollectionConverters.*
 
@@ -17,7 +18,7 @@ object NimbusJwtIssuer extends JwtIssuer {
   private val DefaultTtlSeconds: Long = 3600L
   private val Secret: Array[Byte] =
     sys.env.get("JWT_HS256_SECRET").nn
-      .getOrElse("dev-secret-change-me").nn // ⚠️ replace in prod
+      .getOrElse("this_is_at_least_32_characters_long_bla_blub").nn // ⚠️ replace in prod
       .getBytes(StandardCharsets.UTF_8).nn
 
   /** @return (token, ttlSeconds) */
@@ -41,8 +42,15 @@ object NimbusJwtIssuer extends JwtIssuer {
       signed.sign(signer)
       val token = signed.serialize().nn
 
+      println(s"SIGN secret len=${Secret.length}, sha256=${sha256Hex(Secret).take(16)}")
+      
       (token, ttlSeconds)
     }
+
+  private def sha256Hex(bytes: Array[Byte]): String = {
+    val d = MessageDigest.getInstance("SHA-256").nn.digest(bytes).nn
+    d.map("%02x".format(_)).mkString
+  }
 
   val layer: ULayer[JwtIssuer] =
     ZLayer.succeed(NimbusJwtIssuer)

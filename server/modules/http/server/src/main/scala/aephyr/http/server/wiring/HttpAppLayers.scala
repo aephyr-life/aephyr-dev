@@ -17,7 +17,7 @@ object HttpAppLayers {
   // JwtCfg -> Nimbus config
   val nimbusCfgFromApp: ZLayer[JwtCfg, Nothing, NimbusJwtVerifier.Config] =
     ZLayer.fromFunction((j: JwtCfg) =>
-      NimbusJwtVerifier.Config(j.issuer, j.audience, j.jwkSetJson)
+      NimbusJwtVerifier.Config(j.issuer, j.audience, j.jwkSetJson, "this_is_at_least_32_characters_long_bla_blub")
     )
 
   // Build JwtVerifier from AppConfig + Clock

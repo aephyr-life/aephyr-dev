@@ -1,15 +1,20 @@
 package aephyr.http.server.endpoint.identity
 
+import aephyr.adapters.db.UserWriteRepository
+import aephyr.api.shared.Problem
 import aephyr.auth.application.webauthn.WebAuthnService
 import aephyr.auth.ports.JwtIssuer
-import aephyr.http.apis.endpoints.v0.auth.webauthn.{BeginRegOutput, JwtOut, WebAuthnApi}
+import aephyr.http.apis.endpoints.v0.auth.webauthn.{BeginRegOutput, JwtOut, WebAuthnApi, WebAuthnErrorDto}
 import aephyr.http.apis.types.RawJson
 import sttp.tapir.ztapir.*
 import aephyr.http.server.endpoint.HttpTypes.*
 import aephyr.http.server.mapping.webauthn.WebAuthnDtoMapper
 import aephyr.http.server.wiring.identity.WebAuthnLayers
+import aephyr.identity.application.ports.UserWritePort
+import aephyr.kernel.PersistenceError
 import com.github.plokhotnyuk.jsoniter_scala.core.{JsonValueCodec, readFromString}
 import com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker
+import zio.ZIO
 
 object WebAuthnHandler {
 
@@ -29,13 +34,21 @@ object WebAuthnHandler {
      } yield BeginRegOutput(reg.tx, publicKeyRawFrom(reg.clientJson))
     }
 
+  private def dbToProblem(e: PersistenceError): Problem[WebAuthnErrorDto] =
+    Problem(e.getMessage.nn)
+
   val registrationVerify: ZSE[WebAuthnLayers.Env] =
     WebAuthnApi.registrationVerify.zServerLogic {
       case (tx, json) =>
-        val jsonString = json.value
+        val jsonString = json.value // TODO string?
         for {
           verified <- WebAuthnService.registrationVerify(tx, jsonString).mapError(WebAuthnDtoMapper.toProblem)
           roles     = Set.empty[String]
+          now <- ZIO.clockWith(_.instant)
+          _   <- UserWritePort
+            .upsertActive(verified.userId, now)
+            .mapError(dbToProblem)
+            .unit
           tuple <- JwtIssuer.mintAccess(verified.userId, roles)
           (token, ttlSeconds) = tuple
         } yield JwtOut(token, "Bearer", ttlSeconds)
