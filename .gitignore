@@ -11,7 +11,7 @@ target/
 project/target/
 project/project/
 
-.log
+*.log
 
 # gradle
 .gradle/
