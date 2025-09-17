@@ -1,24 +1,16 @@
 package aephyr.adapters.db
 
-// scalafix:off
 import scala.language.unsafeNulls
 
-import java.sql.{
-  Connection,
-  PreparedStatement,
-  ResultSet,
-  SQLException,
-  Timestamp
-}
+import java.sql.*
+import scala.{ Array => SArray }
+
 import java.time.Instant
 import java.util.UUID
 import javax.sql.DataSource
 
-import zio.*
-
 import aephyr.kernel.PersistenceError
 import aephyr.kernel.PersistenceError.*
-// scalafix:on
 
 object JdbcMini {
 
@@ -46,17 +38,17 @@ object JdbcMini {
     * leaks.
     */
   def withConnection[R](ds: DataSource)(
-    effect: ZIO[Connection, PersistenceError, R]
-  ): IO[PersistenceError, R] =
-    ZIO.scoped {
+    effect: zio.ZIO[Connection, PersistenceError, R]
+  ): zio.IO[PersistenceError, R] =
+    zio.ZIO.scoped {
       // acquire: guarantee a non-null Connection
-      val acquire: IO[PersistenceError, Connection] =
-        ZIO
+      val acquire: zio.IO[PersistenceError, Connection] =
+        zio.ZIO
           .attemptBlocking(ds.getConnection)
           .mapError(toPersistenceError)
           .flatMap {
             c =>
-              ZIO
+              zio.ZIO
                 .fromOption(Option(c))
                 .orElseFail(
                   PersistenceError
@@ -64,32 +56,32 @@ object JdbcMini {
                 )
           }
 
-      ZIO
+      zio.ZIO
         .acquireRelease(acquire)(
-          c => ZIO.attemptBlocking(c.close()).orDie
+          c => zio.ZIO.attemptBlocking(c.close()).orDie
         )
         // IMPORTANT: annotate the param so it stays `Connection` (not `Connection | Null`)
         .flatMap {
           (conn: Connection) =>
-            effect.provideEnvironment(ZEnvironment[Connection](conn))
+            effect.provideEnvironment(zio.ZEnvironment[Connection](conn))
         }
     }
 
   /** Env‑based transaction helper (uses the Connection from environment). */
   def tx[R](
-    effect: ZIO[Connection, PersistenceError, R]
-  ): ZIO[Connection, PersistenceError, R] =
-    ZIO.service[Connection].flatMap {
+    effect: zio.ZIO[Connection, PersistenceError, R]
+  ): zio.ZIO[Connection, PersistenceError, R] =
+    zio.ZIO.service[Connection].flatMap {
       conn =>
-        ZIO
+        zio.ZIO
           .attemptBlocking(conn.setAutoCommit(false))
           .mapError(toPersistenceError) *>
           effect
             .tapBoth(
-              _ => ZIO.attemptBlocking(conn.rollback()).ignore,
-              _ => ZIO.attemptBlocking(conn.commit()).ignore
+              _ => zio.ZIO.attemptBlocking(conn.rollback()).ignore,
+              _ => zio.ZIO.attemptBlocking(conn.commit()).ignore
             )
-            .ensuring(ZIO.attemptBlocking(conn.setAutoCommit(true)).ignore)
+            .ensuring(zio.ZIO.attemptBlocking(conn.setAutoCommit(true)).ignore)
     }
 
   // ---------- Errors (map common SQLState codes) ----------
@@ -119,14 +111,14 @@ object JdbcMini {
     v.fold {
       ps.setObject(idx, null)
     } {
-      case s: String      => ps.setString(idx, s)
-      case b: Boolean     => ps.setBoolean(idx, b)
-      case i: Int         => ps.setInt(idx, i)
-      case l: Long        => ps.setLong(idx, l)
-      case u: UUID        => ps.setObject(idx, u)
-      case t: Instant     => ps.setTimestamp(idx, Timestamp.from(t))
-      case a: Array[Byte] => ps.setBytes(idx, a)
-      case other          => ps.setObject(idx, other)
+      case s: String       => ps.setString(idx, s)
+      case b: Boolean      => ps.setBoolean(idx, b)
+      case i: Int          => ps.setInt(idx, i)
+      case l: Long         => ps.setLong(idx, l)
+      case u: UUID         => ps.setObject(idx, u)
+      case t: Instant      => ps.setTimestamp(idx, Timestamp.from(t))
+      case a: SArray[Byte] => ps.setBytes(idx, a)
+      case other           => ps.setObject(idx, other)
     }
 
   private def prepare(

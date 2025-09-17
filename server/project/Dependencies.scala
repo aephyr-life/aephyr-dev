@@ -10,6 +10,7 @@ object Dependencies {
     val logback          = "1.5.6"
     val slf4j            = "2.0.13"
     val logbackEncoder   = "7.4"
+    val nimbus           = "9.37"
     val tapir            = "1.11.41"
     val zio              = "2.1.20"
     val zioLogging       = "2.5.1"
@@ -45,6 +46,9 @@ object Dependencies {
     val zioTestSbt = "dev.zio"  %% "zio-test-sbt" % V.zio
     val embeddedPostgres =
       "io.zonky.test" % "embedded-postgres" % V.embeddedPostgres
+
+    val nimbus =
+      "com.nimbusds" % "nimbus-jose-jwt" % V.nimbus
 
     val jsoniterCore =
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % V.jsoniter

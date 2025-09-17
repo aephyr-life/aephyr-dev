@@ -1,111 +1,158 @@
 package aephyr.auth.application.webauthn
 
 import zio.*
-import aephyr.auth.domain.UserHandle
-import aephyr.auth.domain.Credential
+import aephyr.auth.domain.{AuthTx, Credential, UserHandle}
 import aephyr.auth.domain.webauthn.*
 import aephyr.auth.ports.*
 import aephyr.kernel.id.UserId
 import WebAuthnService.*
 import aephyr.kernel.ObjectOps.*
+import aephyr.kernel.userlabels.UserLabels
 
 final class WebAuthnServiceLive(
-                                 platform: WebAuthnPlatform,
-                                 tx: ChallengeStore,
-                                 handles: UserHandleRepo,
-                                 repo: WebAuthnRepo,
-                                 clock: Clock
-                               ) extends WebAuthnService {
+  platform: WebAuthnPlatform,
+  tx: ChallengeStore,
+  handles: UserHandleRepo,
+  repo: WebAuthnRepo,
+  clock: Clock
+) extends WebAuthnService {
+
+  private inline def msg(th: Throwable): Option[String] =
+    Option(th.getMessage).map(_.nn)
 
   private def ensureUserHandle(userId: UserId): IO[WebAuthnError, UserHandle] =
-    handles.get(userId).mapError(e => WebAuthnError.Server(e.getMessage.option)).flatMap {
-      case Some(h) => ZIO.succeed(h)
-      case None =>
-        for {
-          bytes <- Random.nextBytes(32).map(_.toArray)
-          h = UserHandle(bytes)
-          _ <- handles.put(userId, h).mapError(e => WebAuthnError.Server(e.getMessage.option))
-        } yield h
-    }
+    handles
+      .get(userId)
+      .mapError(
+        e => WebAuthnError.Server(e.getMessage.option)
+      )
+      .flatMap {
+        case Some(h) => ZIO.succeed(h)
+        case None =>
+          for {
+            bytes <- Random.nextBytes(32).map(_.toArray)
+            h = UserHandle(bytes)
+            _ <- handles
+              .put(userId, h)
+              .mapError(
+                e => WebAuthnError.Server(e.getMessage.option)
+              )
+          } yield h
+      }
 
   // ---------- Registration ----------
 
-  def beginRegistration(cmd: BeginRegCmd): IO[WebAuthnError, BeginRegResult] =
+  def registrationOptions(): IO[WebAuthnError, BeginRegResult] =
     for {
-      uh <- ensureUserHandle(cmd.userId)
-      user = UserEntity(handle = uh, name = cmd.username, displayName = cmd.displayName)
+      provisionalUserId <- ZIO.succeed(UserId.random)
+      (userName, displayName) = UserLabels.from(provisionalUserId)
+      uh <- ensureUserHandle(provisionalUserId)
+      user = UserEntity(id = uh, name = userName, displayName = displayName)
+      res <- platform
+        .startRegistration(user)
+        .mapError(
+          e => WebAuthnError.Server(e.getMessage.option)
+        )
+      txId <- tx.putReg(uh.bytes, res.serverJson)
+    } yield BeginRegResult(txId, res.clientJson)
 
-      // typed options + raw JSON that must be stored for finishRegistration()
-      tuple <- platform
-        .startRegistration(user, cmd.authenticatorSelection, cmd.attestation, cmd.excludeCredentials)
-        .mapError(e => WebAuthnError.Server(e.getMessage.option))
-      (options, platformJson) = tuple
+  import aephyr.kernel.types.Bytes
 
-      txId <- tx.putReg(uh.bytes, platformJson)
-    } yield BeginRegResult(txId, options)
+  override def registrationVerify(
+    authTx: AuthTx,
+    json: String
+  ): IO[WebAuthnError, RegistrationVerified] =
+    tx.getReg(authTx)
+      .someOrFail(
+        WebAuthnError.InvalidTx
+      )
+      .mapError(identity[WebAuthnError])
+      .flatMap {
+        case (uhBytes: Bytes, creationJson: String) =>
+          for {
+            userId <- handles
+              .findByHandle(UserHandle(uhBytes.toArray))
+              .mapError(
+                e => WebAuthnError.Server(e.getMessage.option)
+              ) // Throwable -> WebAuthnError
+              .someOrFail(WebAuthnError.Server(Some("user_handle_unmapped")))
 
-  def finishRegistration(cmd: FinishRegCmd): IO[WebAuthnError, Unit] =
+            fin <- platform
+              .finishRegistration(creationJson, json)
+              .mapError(
+                th => WebAuthnError.Server(msg(th))
+              )
+
+            now <- clock.instant
+            cred = Credential(
+              id = java.util.UUID.randomUUID().nn,
+              userId = userId,
+              credentialId = CredentialId(fin.credentialId).toOption.get,
+              publicKeyCose = PublicKeyCose(fin.publicKeyCose).toOption.get,
+              signCount = fin.signCount,
+              userHandle = UserHandle(uhBytes),
+              uvRequired = false,
+              transports = fin.transports,
+              label = None,
+              createdAt = now,
+              updatedAt = now,
+              lastUsedAt = None
+            )
+
+            _ <- repo
+              .insert(cred)
+              .mapError(
+                th => WebAuthnError.Server(msg(th))
+              )
+            _ <- tx.delReg(authTx).ignore
+          } yield RegistrationVerified(userId = userId)
+      }
+
+  override def authenticationOptions(): IO[WebAuthnError, BeginAuthResult] =
     for {
-      tuple <- tx.getReg(cmd.tx).someOrFail(WebAuthnError.InvalidTx)
-      (uhBytes, reqJson) = tuple
+      start <- platform
+        .startAssertion()
+        .mapError(e => WebAuthnError.Server(msg(e)))
+      txId <- tx
+        .putAuth(start.serverJson)
+    } yield BeginAuthResult(txId, start.clientJson)
 
-      // verify using typed response
-      tuple <- platform
-        .finishRegistration(reqJson, cmd.response)
-        .mapError(e => WebAuthnError.Server(e.getMessage.option))
-      (credId, pkCose, signCount, handle) = tuple
+  override def authenticationVerify(
+                                     authTx: AuthTx,
+                                     json: String
+                                   ): IO[WebAuthnError, AuthenticationVerified] = {
+    def toServerErr(th: Throwable): WebAuthnError = WebAuthnError.Server(msg(th))
 
-      userId <- handles
-        .findByHandle(handle)
-        .mapError(e => WebAuthnError.Server(e.getMessage.option))
-        .someOrFail(WebAuthnError.Server("no user for handle"))
+    (for {
+      serverJson <- tx.getAuth(authTx).someOrFail(WebAuthnError.InvalidTx)
+      fin <- platform.finishAssertion(serverJson, json).mapError(toServerErr)
+      credId <- ZIO
+        .fromEither(CredentialId(fin.credentialId))
+        .mapError(m => WebAuthnError.Server(Some(m)))
+
+      userId <- fin.userHandle match {
+        case Some(uhBytes: Bytes) =>
+          handles
+            .findByHandle(UserHandle(uhBytes.toArray))
+            .mapError(toServerErr)
+            .someOrFail(WebAuthnError.Server(Some("user_handle_unmapped")))
+        case None =>
+          repo
+            .findByCredentialId(credId)
+            .mapError(toServerErr)
+            .someOrFail(WebAuthnError.Server(Some("credential_not_found")))
+            .map(_.userId)
+      }
 
       now <- clock.instant
-      cred = Credential(
-        id = java.util.UUID.randomUUID().nn,
-        userId = userId,
-        credentialId = credId.bytes,
-        publicKeyCose = pkCose.bytes,
-        signCount = signCount,
-        userHandleBytes = uhBytes,
-        uvRequired = false,
-        transports = Nil,
-        label = cmd.label,
-        createdAt = now,
-        updatedAt = now,
-        lastUsedAt = None
-      )
-
-      _ <- repo.insert(cred).mapError(e => WebAuthnError.Server(e.getMessage.option))
-      _ <- tx.delReg(cmd.tx).ignore
-    } yield ()
-
-  // ---------- Authentication ----------
-
-  def beginAuthentication(cmd: BeginAuthCmd): IO[WebAuthnError, BeginAuthResult] =
-    for {
-      tuple <- platform
-        .startAssertion(cmd.userVerification, cmd.allowCredentials)
-        .mapError(e => WebAuthnError.Server(e.getMessage.option))
-      (options, platformJson) = tuple
-
-      txId <- tx.putAuth(platformJson)
-    } yield BeginAuthResult(txId, options)
-
-  def finishAuthentication(cmd: FinishAuthCmd): IO[WebAuthnError, Unit] =
-    for {
-      reqJson <- tx.getAuth(cmd.tx).someOrFail(WebAuthnError.InvalidTx)
-
-      tuple <- platform
-        .finishAssertion(reqJson, cmd.response)
-        .mapError(e => WebAuthnError.Server(e.getMessage.option))
-      (credId, newCount) = tuple
-
       _ <- repo
-        .updateSignCount(credId.bytes.toArray, newCount)
-        .mapError(e => WebAuthnError.Server(e.getMessage.option))
-      _ <- tx.delAuth(cmd.tx).ignore
-    } yield ()
+        .updateUsage(credId, fin.signCount, now)
+        .mapError(toServerErr)
+
+    } yield AuthenticationVerified(userId))
+      .ensuring(tx.delAuth(authTx).ignore)
+      .tapError(e => ZIO.logWarning(s"webauthn authenticationVerify failed tx=$authTx: $e"))
+  }
 }
 
 object WebAuthnServiceLive {

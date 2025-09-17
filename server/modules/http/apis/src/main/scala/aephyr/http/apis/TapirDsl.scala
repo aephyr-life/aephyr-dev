@@ -5,6 +5,7 @@ import sttp.tapir.json.jsoniter.*
 
 import com.github.plokhotnyuk.jsoniter_scala.core.*
 
+@Deprecated()
 object TapirDsl extends Tapir {
 
   val traceId: EndpointInput[Option[String]] =
@@ -19,4 +20,5 @@ object TapirDsl extends Tapir {
     endpoint
       .in("api")
       .errorOut(jsonBody[Problem[A]])
+
 }

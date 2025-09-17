@@ -1,71 +1,64 @@
 package aephyr.auth.application.webauthn
 
+import aephyr.auth.domain.AuthTx
 import aephyr.auth.domain.webauthn.*
-
 import aephyr.kernel.id.UserId
 
 trait WebAuthnService {
   import zio.IO
   import WebAuthnService.*
 
-  def beginRegistration(cmd: BeginRegCmd): IO[WebAuthnError, BeginRegResult]
-  def finishRegistration(cmd: FinishRegCmd): IO[WebAuthnError, Unit]
+  def registrationOptions(): IO[WebAuthnError, BeginRegResult]
 
-  def beginAuthentication(cmd: BeginAuthCmd): IO[WebAuthnError, BeginAuthResult]
-  def finishAuthentication(cmd: FinishAuthCmd): IO[WebAuthnError, Unit]
+  def registrationVerify(tx: AuthTx, json: String): IO[WebAuthnError, RegistrationVerified]
+
+  def authenticationOptions(): IO[WebAuthnError, BeginAuthResult]
+  
+  def authenticationVerify(tx: AuthTx, json: String): IO[WebAuthnError, AuthenticationVerified]
 }
 
 object WebAuthnService {
 
-  // ---------- Commands ----------
-  final case class BeginRegCmd(
-    userId: UserId,
-    username: String,
-    displayName: Option[String],
-    authenticatorSelection: Option[AuthenticatorSelection] = None,
-    attestation: Option[AttestationConveyance] = None,
-    excludeCredentials: List[CredDescriptor] = Nil
-  )
-
-  final case class FinishRegCmd(
-    tx: String,
-    response: RegistrationResponse,
-    label: Option[String]
-  )
-
-  final case class BeginAuthCmd(
-    username: Option[String] = None,
-    allowCredentials: List[CredDescriptor] = Nil,
-    userVerification: Option[UserVerification] = Some(UserVerification.Required)
-  )
-
-  final case class FinishAuthCmd(
-    tx: String,
-    response: AssertionResponse
-  )
-
   // ---------- Results ----------
   final case class BeginRegResult(
-    tx: String,
-    options: CreationOptions
+    tx: AuthTx,
+    clientJson: String
+  )
+
+  final case class RegistrationVerified(
+    userId: UserId
   )
 
   final case class BeginAuthResult(
-    tx: String,
-    options: RequestOptions
+    tx: AuthTx,
+    clientJson: String
+  )
+
+  final case class AuthenticationVerified(
+    userId: UserId
   )
 
   import zio.ZIO
 
-  def beginRegistration(cmd: BeginRegCmd): ZIO[WebAuthnService, WebAuthnError, BeginRegResult] =
-    ZIO.serviceWithZIO[WebAuthnService](_.beginRegistration(cmd))
+  def registrationOptions()
+    : ZIO[WebAuthnService, WebAuthnError, BeginRegResult] =
+    ZIO.serviceWithZIO[WebAuthnService](_.registrationOptions())
 
-  def finishRegistration(cmd: FinishRegCmd): ZIO[WebAuthnService, WebAuthnError, Unit] =
-    ZIO.serviceWithZIO[WebAuthnService](_.finishRegistration(cmd))
+  def registrationVerify(tx: AuthTx, json: String): ZIO[WebAuthnService, WebAuthnError, RegistrationVerified] =
+    ZIO.serviceWithZIO[WebAuthnService](_.registrationVerify(tx, json))
 
-  def beginAuthentication(cmd: BeginAuthCmd): ZIO[WebAuthnService, WebAuthnError, BeginAuthResult] =
-    ZIO.serviceWithZIO[WebAuthnService](_.beginAuthentication(cmd))
+  def authenticationOptions(): ZIO[WebAuthnService, WebAuthnError, BeginAuthResult] =
+    ZIO.serviceWithZIO[WebAuthnService](_.authenticationOptions())
 
-  def finishAuthentication(cmd: FinishAuthCmd): ZIO[WebAuthnService, WebAuthnError, Unit] =
-    ZIO.serviceWithZIO[WebAuthnService](_.finishAuthentication(cmd))
+  def authenticationVerify(tx: AuthTx, json: String): ZIO[WebAuthnService, WebAuthnError, AuthenticationVerified] =
+    ZIO.serviceWithZIO[WebAuthnService](_.authenticationVerify(tx, json))
+
+  //  def finishRegistration(cmd: FinishRegCmd): ZIO[WebAuthnService, WebAuthnError, Unit] =
+//    ZIO.serviceWithZIO[WebAuthnService](_.finishRegistration(cmd))
+//
+//  def beginAuthentication(cmd: BeginAuthCmd): ZIO[WebAuthnService, WebAuthnError, BeginAuthResult] =
+//    ZIO.serviceWithZIO[WebAuthnService](_.beginAuthentication(cmd))
+//
+//  def finishAuthentication(cmd: FinishAuthCmd): ZIO[WebAuthnService, WebAuthnError, Unit] =
+//    ZIO.serviceWithZIO[WebAuthnService](_.finishAuthentication(cmd))
 }

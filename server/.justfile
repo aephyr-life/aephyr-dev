@@ -82,8 +82,34 @@ tunnel-status:
 
 # builds the program
 [group('dev')]
-build:
-  sbtn compile
+build target='choose':
+  #!/usr/bin/env bash
+
+  case {{target}} in
+    choose)
+      x=$(gum choose \
+        "http-server" \
+        "http-apis" \
+        "adapters-db" \
+        "adapters-import" \
+        "adapters-messaging" \
+        "adapters-security" \
+      )
+      target=$x/
+      ;;
+    all)
+      target=
+      ;;
+    *)
+      target={{target}}/
+      ;;
+  esac
+
+  sbtn ${target}compile | \
+    tee sbt.log; \
+    cat <(grep -o "[[:alnum:]]* errors\? found" sbt.log) sbt.log > sbt2.log \
+    && mv sbt2.log sbt.log \
+    && bat sbt.log
 
 # cleans the build
 [group('dev')]
@@ -93,7 +119,7 @@ clean:
 # runs the tests
 [group('dev')]
 test:
-  sbtn test
+  @sbtn test
 
 # starts the http server
 [group('dev')]

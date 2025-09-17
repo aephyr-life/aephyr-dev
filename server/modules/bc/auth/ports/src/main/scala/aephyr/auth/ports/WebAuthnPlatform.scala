@@ -1,32 +1,40 @@
 package aephyr.auth.ports
 
-import aephyr.auth.domain.UserHandle
 import zio.IO
 import aephyr.auth.domain.webauthn.*
+import aephyr.auth.ports.WebAuthnPlatform.FinishedRegistration
+import aephyr.kernel.types.Bytes
 
-/** Thin facade over Yubico. Returns domain models for the app
- * plus the raw JSON that must be stored and later verified.
- */
+import java.util.UUID
+
 trait WebAuthnPlatform {
+
   def startRegistration(
-                         user: UserEntity,
-                         selection: Option[AuthenticatorSelection],
-                         attestation: Option[AttestationConveyance],
-                         exclude: List[CredDescriptor]
-                       ): IO[Throwable, (CreationOptions, String)]
+    user: UserEntity
+  ): IO[Throwable, StartRegistrationResult]
 
   def finishRegistration(
-                          requestJson: String,
-                          response: RegistrationResponse
-                        ): IO[Throwable, (CredentialId, PublicKeyCose, Long, UserHandle)]
+    requestJson: String,
+    responseJson: String
+  ): IO[Throwable, FinishedRegistration]
 
-  def startAssertion(
-                      userVerification: Option[UserVerification],
-                      allow: List[CredDescriptor]
-                    ): IO[Throwable, (RequestOptions, String)]
+  def startAssertion(): IO[Throwable, StartAssertionResult]
 
   def finishAssertion(
-                       requestJson: String,
-                       response: AssertionResponse
-                     ): IO[Throwable, (CredentialId, Long)]
+                     requestJson: String, 
+                     responseJson: String 
+                   ): IO[Throwable, FinishedAssertion]
+}
+
+object WebAuthnPlatform {
+  
+  final case class FinishedRegistration(
+    credentialId: Bytes, // credentialId bytes
+    publicKeyCose: Bytes, // COSE-encoded public key
+    signCount: Long,
+    aaguid: Option[UUID],
+    transports: List[String]
+  )
+  
+  
 }

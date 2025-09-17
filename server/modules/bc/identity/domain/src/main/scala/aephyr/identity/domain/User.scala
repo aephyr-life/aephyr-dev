@@ -1,26 +1,20 @@
 package aephyr.identity.domain
 
+import aephyr.kernel.id.UserId
+
 import java.time.Instant
-import java.util.UUID
 
 final case class User(
-  id: User.Id,
-  emailNorm: User.EmailAddress,
+  id: UserId,
+  userName: String,
+  displayName: String,
   status: User.Status,
   createdAt: Instant,
   updatedAt: Instant
 )
 
 object User:
-
-  opaque type Id = UUID // TODO use UserId from kernel
-  object Id:
-    def apply(): Id           = UUID.randomUUID().nn
-    def apply(uuid: UUID): Id = uuid
-
-  extension (x: Id) def value: UUID = x
-  given CanEqual[UUID, UUID]        = CanEqual.derived
-
+  
   opaque type EmailAddress = String
 
   object EmailAddress:

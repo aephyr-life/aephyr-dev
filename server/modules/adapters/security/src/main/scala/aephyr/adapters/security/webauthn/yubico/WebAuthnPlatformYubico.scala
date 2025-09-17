@@ -1,115 +1,124 @@
 package aephyr.adapters.security.webauthn.yubico
 
-//import aephyr.adapters.security.webauthn.yubico.DomainConversions
-import aephyr.auth.domain.UserHandle
+import aephyr.adapters.security.webauthn.yubico.Interop.*
 import aephyr.auth.domain.webauthn.*
 import aephyr.auth.ports.WebAuthnPlatform
+import aephyr.auth.ports.WebAuthnPlatform.FinishedRegistration
+import aephyr.kernel.types.Bytes
+import com.yubico.internal.util.JacksonCodecs
+import com.yubico.webauthn.data.{AuthenticatorSelectionCriteria, PublicKeyCredential, PublicKeyCredentialCreationOptions, ResidentKeyRequirement, UserVerificationRequirement}
 
+import scala.jdk.CollectionConverters.*
 import scala.language.unsafeNulls
-//import aephyr.auth.domain.webauthn.AttestationConveyance
-//import aephyr.auth.domain.webauthn.AttestationConveyance.*
-//import aephyr.auth.domain.webauthn.UserVerification
-//import aephyr.auth.domain.webauthn.ResidentKey
 import com.yubico.webauthn.*
-//import com.yubico.webauthn.data.*
 import zio.*
 
 final class WebAuthnPlatformYubico(rp: RelyingParty) extends WebAuthnPlatform:
-
   // ----- Registration -----
 
-  override def startRegistration(
-                                  user: UserEntity,
-                                  selection: Option[AuthenticatorSelection],
-                                  attestation: Option[AttestationConveyance],
-                                  exclude: List[CredDescriptor]
-                                ): IO[Throwable, (CreationOptions, String)] =
-    ZIO.fail(???)
-//    ZIO.attempt {
-//      val optsB = StartRegistrationOptions
-//        .builder()
-//        .user(toYubicoUser(user))
-//        .attestationConveyancePreference(domAttestation(attestation))
-//
-//      selection.foreach(s => optsB.authenticatorSelection(toYubicoSelection(s)))
-//      if exclude.nonEmpty then optsB.excludeCredentials(toYubicoExclude(exclude))
-//
-//      val req = rp.startRegistration(optsB.build())
-//      val requestJson = req.toJson                          // server-side request JSON (store by tx)
-//      val clientJson  = unwrapPublicKey(req.toCredentialsCreateJson) // inner publicKey JSON
-//      (CreationOptions(clientJson), requestJson)
-//    }
+  override def startRegistration(user: UserEntity): IO[Throwable, StartRegistrationResult] =
+    ZIO.attempt {
+      val sel = AuthenticatorSelectionCriteria.builder()
+        .userVerification(UserVerificationRequirement.REQUIRED)
+        .residentKey(ResidentKeyRequirement.PREFERRED)
+        .build()
+
+      val sro = StartRegistrationOptions.builder()
+        .user(user.toYUser)
+        .authenticatorSelection(sel)
+        .build()
+
+      val opts = rp.startRegistration(sro)
+      StartRegistrationResult(
+        clientJson = opts.toCredentialsCreateJson,
+        serverJson = opts.toJson
+      )
+    }
+
+  private inline def opt[A](o: A | Null): Option[A] = Option(o).map(_.nn)
+
+  private def uuidFrom16(bytes: Array[Byte]): Option[java.util.UUID] =
+    if (bytes != null && bytes.length == 16) {
+      val bb = java.nio.ByteBuffer.wrap(bytes).asLongBuffer()
+      Some(new java.util.UUID(bb.get(0), bb.get(1)))
+    } else None
 
   override def finishRegistration(
                                    requestJson: String,
-                                   response: RegistrationResponse
-                                 ): IO[Throwable, (CredentialId, PublicKeyCose, Long, UserHandle)] =
-    ZIO.fail(???)
-//    ZIO.attempt {
-//      val request = PublicKeyCredentialCreationOptions.fromJson(requestJson)
-//
-//      // Assuming your RegistrationResponse wraps the raw JSON produced by the browser
-//      // e.g., case class RegistrationResponse(json: String)
-//      val cred = PublicKeyCredential.parseRegistrationResponseJson(response.json)
-//
-//      val result = rp.finishRegistration(
-//        FinishRegistrationOptions.builder()
-//          .request(request)
-//          .response(cred)
-//          .build()
-//      )
-//
-//      val credentialId = result.getKeyId.getId.getBytes
-//      val publicKeyCose = result.getPublicKeyCose.getBytes
-//      val userHandleBytes = result.getKeyId.getUser.getId.getBytes // falls back to request user id
-//      val signCount = 0L // initial; some authenticators include count in attestation but 0 is fine
-//
-//      (CredentialId(credentialId), PublicKeyCose(publicKeyCose), signCount, UserHandle(userHandleBytes))
-//    }
+                                   responseJson: String
+                                 ): IO[Throwable, FinishedRegistration] =
+    ZIO.attempt {
+      val creation  = PublicKeyCredentialCreationOptions.fromJson(requestJson)
+      val response  = PublicKeyCredential.parseRegistrationResponseJson(responseJson)
 
-  // ----- Assertion -----
+      val res = rp.finishRegistration(
+        com.yubico.webauthn.FinishRegistrationOptions.builder()
+          .request(creation)
+          .response(response)
+          .build()
+      )
 
-  override def startAssertion(
-                               userVerification: Option[UserVerification],
-                               allow: List[CredDescriptor]
-                             ): IO[Throwable, (RequestOptions, String)] =
-    ZIO.fail(???)
-//    ZIO.attempt {
-//      val b = StartAssertionOptions.builder()
-//      userVerification.foreach(uv => b.userVerification(domUserVerification(uv)))
-//      if allow.nonEmpty then
-//        val allowList = toYubicoExclude(allow) // same shape as excludeCredentials
-//        b.allowCredentials(allowList)
-//
-//      val req = rp.startAssertion(b.build())
-//      val requestJson = req.toJson
-//      val clientJson  = unwrapPublicKey(req.toCredentialsGetJson) // inner publicKey JSON
-//      (RequestOptions(clientJson), requestJson)
-//    }
+      val aaguidUuid: Option[java.util.UUID] =
+        opt(res.getAaguid).flatMap(ba => uuidFrom16(ba.getBytes))
 
-  override def finishAssertion(
-                                requestJson: String,
-                                response: AssertionResponse
-                              ): IO[Throwable, (CredentialId, Long)] =
-    ZIO.fail(???)
-//    ZIO.attempt {
-//      val request = AssertionRequest.fromJson(requestJson)
-//
-//      // Assuming your AssertionResponse wraps the raw JSON string from the browser
-//      val cred = PublicKeyCredential.parseAssertionResponseJson(response.json)
-//
-//      val result = rp.finishAssertion(
-//        FinishAssertionOptions
-//          .builder()
-//          .request(request)
-//          .response(cred)
-//          .build()
-//      )
-//
-//      val idBytes   = result.getCredential.getCredentialId.getBytes
-//      val signCount = result.getCredential.getSignatureCount.toLong
-//      (CredentialId(idBytes), signCount)
-//    }
+      // Transports Optional -> List[String]
+      val transports: List[String] = {
+        val keyId = res.getKeyId
+        if (keyId != null && keyId.getTransports != null && keyId.getTransports.isPresent)
+          keyId.getTransports.get.asScala.map(_.toString).toList
+        else Nil
+      }
+
+      FinishedRegistration(
+        credentialId  = Bytes.fromArray(res.getKeyId.getId.getBytes),
+        publicKeyCose = Bytes.fromArray(res.getPublicKeyCose.getBytes),
+        signCount     = res.getSignatureCount.toLong,
+        aaguid        = aaguidUuid,
+        transports    = transports
+      )
+    }
+
+  override def startAssertion(): IO[Throwable, StartAssertionResult] =
+    ZIO.attempt {
+      val sao = StartAssertionOptions.builder()
+        .userVerification(UserVerificationRequirement.REQUIRED)
+        .build()
+
+      // val tx = AuthTx.generate()
+      // pending.storeAssertion(tx, req.toJson)
+
+      val req = rp.startAssertion(sao)
+
+      val clientJson =
+        req.getPublicKeyCredentialRequestOptions.toCredentialsGetJson
+
+      val serverJson =
+        JacksonCodecs.json().writeValueAsString(req)
+
+      StartAssertionResult(clientJson, serverJson)
+    }
+
+  def finishAssertion(serverJson: String, responseJson: String): IO[Throwable, FinishedAssertion] =
+    ZIO.attempt {
+      val request = JacksonCodecs.json().readValue(serverJson, classOf[AssertionRequest])
+      val response = PublicKeyCredential.parseAssertionResponseJson(responseJson)
+
+      val res = rp.finishAssertion(
+        FinishAssertionOptions.builder()
+          .request(request)
+          .response(response)
+          .build()
+      )
+
+      if (!res.isSuccess) throw new RuntimeException("WebAuthn assertion verification failed")
+
+      FinishedAssertion(
+        credentialId  = Bytes.fromArray(res.getCredential.getCredentialId.getBytes),
+        userHandle    = Option(Bytes.fromArray(res.getCredential.getUserHandle.getBytes)),
+        signCount     = res.getSignatureCount,
+        userVerified  = res.isUserVerified
+      )
+    }
 
 object WebAuthnPlatformYubico:
   val layer: ZLayer[RelyingParty, Nothing, WebAuthnPlatform] =
