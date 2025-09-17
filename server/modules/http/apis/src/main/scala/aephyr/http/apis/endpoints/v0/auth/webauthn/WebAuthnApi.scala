@@ -26,20 +26,17 @@ object WebAuthnApi {
       .out(statusCode(StatusCode.Created))
       .out(jsonOut[JwtOut])
 
-//  val eBeginAuth: PublicEndpoint[BeginAuthInput, Problem[WebAuthnError], BeginAuthOutput, Any] =
-//    webauthn
-//      .post
-//      .in("authentication" / "options")
-//      .in(jsonIn[BeginAuthInput])
-//      .out(jsonOut[BeginAuthOutput])
+  val authenticationOptions: PublicEndpoint[Unit, Problem[WebAuthnErrorDto], BeginAuthOutput, Any] =
+    webauthn
+      .post
+      .in("authentication" / "options")
+      .out(jsonOut[BeginAuthOutput])
 
-//  val eFinishAuth: PublicEndpoint[FinishAuthInput, Problem[WebAuthnError], StatusCode, Any] =
-//    webauthn
-//      .post
-//      .in("authentication" / "verify")
-//      .in(jsonIn[FinishAuthInput])
-//      .out(statusCode)
-
-//  val endpoints = List(eBeginReg, eFinishReg, eBeginAuth, eFinishAuth)
-  val endpoints = List(registrationOptions)
+  val authenticationVerify: PublicEndpoint[(AuthTx, RawJson), Problem[WebAuthnErrorDto], JwtOut, Any] =
+    webauthn
+      .post
+      .in("authentication" / path[AuthTx] / "verify")
+      .in(jsonIn[RawJson]) // the client’s PublicKeyCredential (assertion) as raw JSON
+      .out(statusCode(StatusCode.Ok))
+      .out(jsonOut[JwtOut])
 }

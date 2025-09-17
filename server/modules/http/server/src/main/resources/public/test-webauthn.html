@@ -56,6 +56,74 @@
       return bytes;
     }
 
+    function b64UrlToArrayBuffer(b64url) {
+    if (b64url == null || b64url === "") return new ArrayBuffer(0);
+    let b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes.buffer;
+  }
+
+  function arrayBufferByteLen(x) {
+    if (x instanceof ArrayBuffer) return x.byteLength;
+    if (ArrayBuffer.isView(x)) return x.byteLength;
+    return -1;
+  }
+
+    function sanitizeGetOptions(publicKey) {
+      // rpId must be a registrable suffix of current origin
+      const host = location.hostname; // e.g., "dev.aephyr.life"
+      if (publicKey.rpId) {
+        const ok = (host === publicKey.rpId) || host.endsWith("." + publicKey.rpId);
+        if (!ok) {
+          throw new Error(`rpId mismatch: options.rpId="${publicKey.rpId}" vs page.host="${host}". Serve this page from https://${publicKey.rpId}/ or adjust your server RP ID.`);
+        }
+      }
+      // bytes
+      publicKey.challenge = b64UrlToArrayBuffer(publicKey.challenge);
+
+      if (typeof publicKey.timeout === "string") {
+        const n = parseInt(publicKey.timeout, 10);
+        if (!Number.isNaN(n)) publicKey.timeout = n;
+      }
+
+      if (publicKey.userVerification) {
+        publicKey.userVerification = String(publicKey.userVerification).toLowerCase(); // "required" | "preferred" | "discouraged"
+      }
+
+      if (Array.isArray(publicKey.allowCredentials)) {
+        publicKey.allowCredentials = publicKey.allowCredentials
+          .map(c => ({
+            type: "public-key", // normalize (spec requires "public-key")
+            id: (c.id instanceof ArrayBuffer || ArrayBuffer.isView(c.id))
+                  ? (ArrayBuffer.isView(c.id) ? c.id.buffer : c.id)
+                  : b64UrlToArrayBuffer(c.id),
+            transports: Array.isArray(c.transports)
+              ? c.transports.filter(t => ["usb","nfc","ble","internal","hybrid","cable"].includes(t))
+              : undefined
+          }))
+          .filter(c => arrayBufferByteLen(c.id) > 0); // drop empty ids
+        if (publicKey.allowCredentials.length === 0) {
+          delete publicKey.allowCredentials; // empty array can trip some user agents
+        }
+      }
+
+      // Optional: log sizes, not raw bytes
+      const debug = {
+        ...publicKey,
+        challenge: `(bytes ${arrayBufferByteLen(publicKey.challenge)})`,
+        allowCredentials: publicKey.allowCredentials?.map(c => ({
+          type: c.type,
+          id: `(bytes ${arrayBufferByteLen(c.id)})`,
+          transports: c.transports
+        }))
+      };
+      log("Sanitized get() options:", debug);
+      return publicKey;
+    }
+
     async function beginRegistration() {
       try {
         // 1) options (POST, no body, no Content-Type)
@@ -110,22 +178,17 @@
 
     async function beginAuthentication() {
       try {
-        // 1) options (POST, no body, no Content-Type)
         const resp = await fetch(`${API_BASE}/authentication/options`, { method: "POST" });
-        const { publicKey, tx } = await resp.json();
-        log("BeginAuth options:", { tx, publicKey });
+        const { tx, publicKey } = await resp.json();
+        log("BeginAuth options (raw):", { tx, publicKey });
 
-        // 2) decode
-        publicKey.challenge = b64UrlToBytes(publicKey.challenge);
-        if (publicKey.allowCredentials) {
-          publicKey.allowCredentials = publicKey.allowCredentials.map(c => ({ ...c, id: b64UrlToBytes(c.id) }));
-        }
+        // sanitize/normalize before calling WebAuthn
+        sanitizeGetOptions(publicKey);
 
-        // 3) get assertion
+        // get assertion
         const assertion = await navigator.credentials.get({ publicKey });
         log("Got assertion:", assertion);
 
-        // 4) payload
         const payload = assertion.toJSON ? assertion.toJSON() : {
           id: assertion.id,
           rawId: bufToB64Url(assertion.rawId),
@@ -139,25 +202,22 @@
           clientExtensionResults: assertion.getClientExtensionResults?.() ?? {}
         };
 
-        // 5) verify -> token
-        const verify = await fetch(`${API_BASE}/authentication/verify`, {
+        const verify = await fetch(`${API_BASE}/authentication/${tx}/verify`, {
           method: "POST",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({ tx, responseJson: JSON.stringify(payload) })
+          body: JSON.stringify(payload)
         });
 
-        const body = await verify.json().catch(async () => ({ raw: await verify.text() }));
+        const text = await verify.text();
+        let body;
+        try { body = JSON.parse(text); } catch { body = { raw: text }; }
         log("FinishAuth status:", verify.status, body);
 
         const token = body?.accessToken;
-        if (token) {
-          setToken(token);
-          await callMe(); // call /me immediately
-        } else {
-          log("❌ No accessToken in auth response.");
-        }
+        if (token) { setToken(token); await callMe(); }
+        else log("❌ No accessToken in auth response.");
       } catch (e) {
-        log("❌ beginAuthentication error:", e?.message || e);
+        log("❌ beginAuthentication error:", e?.name || "Error", e?.message || e);
       }
     }
 

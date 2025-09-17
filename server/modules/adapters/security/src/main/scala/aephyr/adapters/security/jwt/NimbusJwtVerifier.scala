@@ -34,7 +34,6 @@ object NimbusJwtVerifier {
       } yield new JwtVerifier {
         def verifyAccess(token: String) = for {
           jwt   <- ZIO.attempt(SignedJWT.parse(token)).mapError(_ =>
-            println("--------> A")
             AuthError.InvalidToken)
           keyId  = Option(jwt.getHeader.getKeyID)
           jwkOpt = keyId.flatMap(id => Option(jwks.getKeyByKeyId(id))).orElse(jwks.getKeys.asScala.headOption)
@@ -42,7 +41,6 @@ object NimbusJwtVerifier {
             t.printStackTrace()
             AuthError.InvalidToken)
           _     <- if (ok) ZIO.unit else ZIO.fail({
-            println("--------> B")
             AuthError.InvalidToken})
           now   <- clock.instant
           cs     = jwt.getJWTClaimsSet
@@ -50,10 +48,8 @@ object NimbusJwtVerifier {
           uid   <- ZIO
             .fromOption(Option(cs.getSubject))
             .mapError(_ =>
-              println("--------> C")
               AuthError.InvalidToken)
             .flatMap(s => ZIO.fromEither(UserId.fromString(s)).mapError(_ =>
-              println("--------> D")
               AuthError.InvalidToken))
           roles  = Option(cs.getStringListClaim("roles")).map(_.asScala.toSet)
             .orElse(Option(cs.getStringListClaim("role")).map(_.asScala.toSet))
@@ -83,7 +79,6 @@ object NimbusJwtVerifier {
 //                  .orElse(cfg.sharedSecret.getBytes("UTF-8"))
 //                  .getOrElse(Array.emptyByteArray)
               val macKeyBytes = cfg.sharedSecret.getBytes("UTF-8")  // 👈 dev-only hardcoded secret
-              println(s"HS verify with secret len=${cfg.sharedSecret.getBytes("UTF-8").length}, sha256=${sha256Hex(cfg.sharedSecret.getBytes("UTF-8")).take(16)}")
               require(macKeyBytes.nonEmpty, "No HMAC secret provided (oct JWK or sharedSecret)")
               jwt.verify(new MACVerifier(macKeyBytes))
 

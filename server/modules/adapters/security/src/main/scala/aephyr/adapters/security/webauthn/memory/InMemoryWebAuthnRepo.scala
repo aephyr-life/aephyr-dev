@@ -1,10 +1,14 @@
 package aephyr.adapters.security.webauthn.memory
 
 import zio.*
+
 import java.util.Base64
 import aephyr.auth.ports.WebAuthnRepo
 import aephyr.auth.domain.Credential
+import aephyr.auth.domain.webauthn.{CredentialId, Label}
 import aephyr.kernel.id.UserId
+
+import java.time.Instant
 
 object B64Url {
   private val enc = Base64.getUrlEncoder.nn.withoutPadding().nn
@@ -19,19 +23,19 @@ final case class InMemoryWebAuthnRepo(
                                      ) extends WebAuthnRepo {
 
   def insert(c: Credential): Task[Unit] = {
-    val key = B64Url.encBytes(c.credentialId.toArray)
+    val key = B64Url.encBytes(c.credentialId.bytes.toArray)
     byUser.update(m => m.updated(c.userId, c :: m.getOrElse(c.userId, Nil))) *>
       byCredId.update(_ + (key -> c)).unit
   }
 
-  def findByUser(userId: UserId): Task[List[Credential]] =
+  override def findByUser(userId: UserId): Task[List[Credential]] =
     byUser.get.map(_.getOrElse(userId, Nil))
 
-  def findByCredentialId(credId: Array[Byte]): Task[Option[Credential]] =
-    byCredId.get.map(_.get(B64Url.encBytes(credId)))
+  override def findByCredentialId(credId: CredentialId): Task[Option[Credential]] =
+    byCredId.get.map(_.get(B64Url.encBytes(credId.bytes.toArray)))
 
-  def updateSignCount(credId: Array[Byte], newCount: Long): Task[Unit] = {
-    val key = B64Url.encBytes(credId)
+  override def updateSignCount(credId: CredentialId, newCount: Long): Task[Unit] = {
+    val key = B64Url.encBytes(credId.bytes.toArray)
     byCredId.update { m =>
       m.get(key) match {
         case Some(c) => m.updated(key, c.copy(signCount = newCount))
@@ -39,6 +43,33 @@ final case class InMemoryWebAuthnRepo(
       }
     }.unit
   }
+
+  override def updateUsage(credentialId: CredentialId, newSignCount: Long, now: Instant): Task[Unit] =
+    val key = B64Url.encBytes(credentialId.bytes.toArray)
+
+    byCredId.update { m =>
+      m.get(key) match {
+        case Some(c) =>
+          // Never decrease the stored counter; clamp negatives to 0 just in case
+          val nextCount = math.max(c.signCount, math.max(0L, newSignCount))
+          val updated = c.copy(
+            signCount = nextCount,
+            lastUsedAt = Some(now),
+            updatedAt = now
+          )
+          m.updated(key, updated)
+
+        case None =>
+          // Credential not found -> keep map unchanged (no-op), like your updateSignCount
+          m
+      }
+    }.unit
+
+  override def rename(credentialId: CredentialId, label: Option[Label]): Task[Unit] = ???
+
+  override def disable(credentialId: CredentialId): Task[Unit] = ???
+
+  override def delete(credentialId: CredentialId): Task[Unit] = ???
 }
 
 object InMemoryWebAuthnRepo {

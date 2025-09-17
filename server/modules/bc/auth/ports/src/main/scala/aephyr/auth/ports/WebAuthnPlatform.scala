@@ -14,27 +14,20 @@ trait WebAuthnPlatform {
   ): IO[Throwable, StartRegistrationResult]
 
   def finishRegistration(
-    requestJson: String, // the exact creationOptions JSON you stored (aka serverJson)
-    responseJson: String // the raw PublicKeyCredential JSON from the client
+    requestJson: String,
+    responseJson: String
   ): IO[Throwable, FinishedRegistration]
 
-//  def finishRegistration(
-//                          requestJson: String,
-//                          response: RegistrationResponse
-//                        ): IO[Throwable, (CredentialId, PublicKeyCose, Long, UserHandle)]
-//
-//  def startAssertion(
-//                      userVerification: Option[UserVerification],
-//                      allow: List[CredDescriptor]
-//                    ): IO[Throwable, (RequestOptions, String)]
-//
-//  def finishAssertion(
-//                       requestJson: String,
-//                       response: AssertionResponse
-//                     ): IO[Throwable, (CredentialId, Long)]
+  def startAssertion(): IO[Throwable, StartAssertionResult]
+
+  def finishAssertion(
+                     requestJson: String, 
+                     responseJson: String 
+                   ): IO[Throwable, FinishedAssertion]
 }
 
 object WebAuthnPlatform {
+  
   final case class FinishedRegistration(
     credentialId: Bytes, // credentialId bytes
     publicKeyCose: Bytes, // COSE-encoded public key
@@ -42,4 +35,6 @@ object WebAuthnPlatform {
     aaguid: Option[UUID],
     transports: List[String]
   )
+  
+  
 }

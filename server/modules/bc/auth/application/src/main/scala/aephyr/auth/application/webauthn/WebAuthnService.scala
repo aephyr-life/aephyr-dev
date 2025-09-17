@@ -11,10 +11,10 @@ trait WebAuthnService {
   def registrationOptions(): IO[WebAuthnError, BeginRegResult]
 
   def registrationVerify(tx: AuthTx, json: String): IO[WebAuthnError, RegistrationVerified]
-//  def finishRegistration(cmd: FinishRegCmd): IO[WebAuthnError, Unit]
-//
-//  def beginAuthentication(cmd: BeginAuthCmd): IO[WebAuthnError, BeginAuthResult]
-//  def finishAuthentication(cmd: FinishAuthCmd): IO[WebAuthnError, Unit]
+
+  def authenticationOptions(): IO[WebAuthnError, BeginAuthResult]
+  
+  def authenticationVerify(tx: AuthTx, json: String): IO[WebAuthnError, AuthenticationVerified]
 }
 
 object WebAuthnService {
@@ -29,6 +29,15 @@ object WebAuthnService {
     userId: UserId
   )
 
+  final case class BeginAuthResult(
+    tx: AuthTx,
+    clientJson: String
+  )
+
+  final case class AuthenticationVerified(
+    userId: UserId
+  )
+
   import zio.ZIO
 
   def registrationOptions()
@@ -37,6 +46,12 @@ object WebAuthnService {
 
   def registrationVerify(tx: AuthTx, json: String): ZIO[WebAuthnService, WebAuthnError, RegistrationVerified] =
     ZIO.serviceWithZIO[WebAuthnService](_.registrationVerify(tx, json))
+
+  def authenticationOptions(): ZIO[WebAuthnService, WebAuthnError, BeginAuthResult] =
+    ZIO.serviceWithZIO[WebAuthnService](_.authenticationOptions())
+
+  def authenticationVerify(tx: AuthTx, json: String): ZIO[WebAuthnService, WebAuthnError, AuthenticationVerified] =
+    ZIO.serviceWithZIO[WebAuthnService](_.authenticationVerify(tx, json))
 
   //  def finishRegistration(cmd: FinishRegCmd): ZIO[WebAuthnService, WebAuthnError, Unit] =
 //    ZIO.serviceWithZIO[WebAuthnService](_.finishRegistration(cmd))

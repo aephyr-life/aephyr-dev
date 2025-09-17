@@ -41,8 +41,6 @@ object NimbusJwtIssuer extends JwtIssuer {
 
       signed.sign(signer)
       val token = signed.serialize().nn
-
-      println(s"SIGN secret len=${Secret.length}, sha256=${sha256Hex(Secret).take(16)}")
       
       (token, ttlSeconds)
     }

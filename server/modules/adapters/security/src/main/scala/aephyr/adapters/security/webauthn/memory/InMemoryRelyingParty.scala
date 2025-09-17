@@ -8,14 +8,18 @@ import zio.*
 import scala.jdk.CollectionConverters.*
 import com.yubico.webauthn.*
 import com.yubico.webauthn.data.{ByteArray, PublicKeyCredentialDescriptor}
-
 import com.yubico.webauthn.data.*
-
 import aephyr.auth.ports.WebAuthnRepo
 import aephyr.auth.ports.UserHandleRepo
+import aephyr.kernel.types.Bytes
 import aephyr.shared.config.AppConfig
+import aephyr.adapters.security.webauthn.yubico.Interop.*
 
 object InMemoryRelyingParty {
+  
+  private def bytes(ba: ByteArray): Bytes =
+    Bytes.fromArray(ba.getBytes)
+  
   val live: ZLayer[WebAuthnRepo & UserHandleRepo & AppConfig, Throwable, RelyingParty] =
     ZLayer.fromZIO {
       for {
@@ -58,13 +62,13 @@ object InMemoryRelyingParty {
           // return what we have in DB (safer, canonical).
           override def lookup(credentialId: ByteArray, userHandle: ByteArray)
           : Optional[RegisteredCredential] = {
-            val cOpt = runTask(creds.findByCredentialId(credentialId.getBytes))
+            val cOpt = runTask(creds.findByCredentialId(credentialId.toCredentialId))
             Optional.ofNullable(
               cOpt.map { c =>
                 RegisteredCredential.builder()
                   .credentialId(credentialId)
-                  .userHandle(new ByteArray(c.userHandleBytes.toArray))
-                  .publicKeyCose(new ByteArray(c.publicKeyCose.toArray))
+                  .userHandle(new ByteArray(c.userHandle.bytesCopy))
+                  .publicKeyCose(new ByteArray(c.publicKeyCose.bytes.toArray))
                   .signatureCount(c.signCount.toInt)
                   .build()
               }.orNull
@@ -74,13 +78,13 @@ object InMemoryRelyingParty {
           // Called when authenticator omits userHandle (common case you’re seeing).
           // MUST return a RegisteredCredential with the STORED userHandle bytes.
           override def lookupAll(credentialId: ByteArray): java.util.Set[RegisteredCredential] = {
-            val cOpt = runTask(creds.findByCredentialId(credentialId.getBytes))
+            val cOpt = runTask(creds.findByCredentialId(credentialId.toCredentialId))
             cOpt.map { c =>
               Collections.singleton(
                 RegisteredCredential.builder()
                   .credentialId(credentialId)
-                  .userHandle(new ByteArray(c.userHandleBytes.toArray))
-                  .publicKeyCose(new ByteArray(c.publicKeyCose.toArray))
+                  .userHandle(new ByteArray(c.userHandle.bytesCopy))
+                  .publicKeyCose(new ByteArray(c.publicKeyCose.bytes.toArray))
                   .signatureCount(c.signCount.toInt)
                   .build()
               )
