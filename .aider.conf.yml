@@ -1,0 +1,13 @@
+model: o4-mini
+weak-model: gpt-4o-mini
+
+subtree-only: true
+auto-commits: true
+#lint: true
+
+user-input-color: "#00cc00"
+tool-error-color: "#FF2222"
+tool-warning-color: "#FFA500"
+assistant-output-color: "#0088ff"
+
+

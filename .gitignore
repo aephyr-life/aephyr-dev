@@ -1,3 +1,4 @@
+.env
 .envrc.local
 .dev/
 
@@ -25,3 +26,4 @@ out/
 *.xcuserstate
 DerivedData/
 
+.aider*
