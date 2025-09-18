@@ -1,20 +1,13 @@
-vim: true
-
-# Models
 model: o4-mini
 weak-model: gpt-4o-mini
 
-# Git
 subtree-only: true
 auto-commits: true
-commit-prompt: "summarize concisely in imperative mood"
+#lint: true
 
-lint: true
-
-# Colors
-dark-mode: true
 user-input-color: "#00cc00"
 tool-error-color: "#FF2222"
 tool-warning-color: "#FFA500"
 assistant-output-color: "#0088ff"
+
 

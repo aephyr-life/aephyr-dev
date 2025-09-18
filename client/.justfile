@@ -2,12 +2,16 @@
 set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 
 # --- iOS config: adjust SCHEME and BUNDLE_ID to match your Xcode project ---
-XCODEPROJ := "ios/AephyrApp/AephyrApp.xcodeproj"
-SCHEME    := "AephyrApp"            # use `xcodebuild -list -project ios/AephyrApp.xcodeproj` to verify
-DEVICE    := "iPhone 15 Pro"        # pick any installed simulator device
-BUNDLE_ID := "com.aephyr.app"       # set to your actual bundle id
-DERIVED   := "build"                # local derived data so paths are predictable
-CONFIG    := "Debug"
+XCODEPROJ  := "ios/AephyrApp/AephyrApp.xcodeproj"
+SCHEME     := "AephyrApp"            # use `xcodebuild -list -project ios/AephyrApp.xcodeproj` to verify
+DEVICE     := "iPhone 15 Pro"        # pick any installed simulator device
+BUNDLE_ID  := "com.aephyr.app"       # set to your actual bundle id
+DERIVED    := "build"                # local derived data so paths are predictable
+CONFIG     := "Debug"
+SHARED_DIR := "shared"
+IOS_VENDOR := "ios/Vendor"
+XC_DEBUG   := "shared/build/XCFrameworks/Debug/AephyrShared.xcframework"
+XC_RELEASE := "shared/build/XCFrameworks/Release/AephyrShared.xcframework"
 
 # Derived paths used by xcodebuild when -derivedDataPath is set
 APP_PATH := "{{DERIVED}}/Build/Products/{{CONFIG}}-iphonesimulator/{{SCHEME}}.app"
@@ -24,15 +28,28 @@ boot-sim:
 	xcrun simctl boot "{{DEVICE}}" || true
 	open -a Simulator
 
-kmm-xc-debug:
-	./shared/gradlew -p shared clean assembleAephyrSharedDebugXCFramework
-	ln -sfn ../../shared/build/XCFrameworks/Debug/AephyrShared.xcframework ios/Vendor/AephyrShared.xcframework
-	@echo "Updated symlink to Debug XCFramework."
+kmm-xc mode:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    MODE="{{mode}}"
+    if [[ "$MODE" != "debug" && "$MODE" != "release" ]]; then
+      echo "Mode must be 'debug' or 'release'"; exit 1
+    fi
 
-kmm-xc-release:
-	./shared/gradlew -p shared clean assembleAephyrSharedReleaseXCFramework
-	ln -sfn ../../shared/build/XCFrameworks/Release/AephyrShared.xcframework ios/Vendor/AephyrShared.xcframework
-	@echo "Updated symlink to Release XCFramework."
+    if [[ "$MODE" == "debug" ]]; then
+      ./shared/gradlew -p {{SHARED_DIR}} assembleAephyrSharedDebugXCFramework \
+        --build-cache --configuration-cache #-x test
+      XC="{{XC_DEBUG}}"
+    else
+      ./shared/gradlew -p {{SHARED_DIR}} assembleAephyrSharedReleaseXCFramework \
+        --build-cache --configuration-cache #-x test
+      XC="{{XC_RELEASE}}"
+    fi
+
+    mkdir -p "{{IOS_VENDOR}}"
+    ln -sfn "../../${XC}" "{{IOS_VENDOR}}/AephyrShared.xcframework"
+    echo "Linked $MODE XCFramework → {{IOS_VENDOR}}/AephyrShared.xcframework"
+
 
 # --- iOS run in Simulator ---
 dev-ios: boot-sim

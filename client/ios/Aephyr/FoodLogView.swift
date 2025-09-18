@@ -1,4 +1,5 @@
 import SwiftUI
+import AephyrShared
 
 struct Food: Identifiable {
     let id = UUID()
@@ -13,73 +14,105 @@ struct FoodRowView: View {
     let food: Food
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(food.name)
                     .font(.headline)
-                Text("\(food.calories) kcal \(food.protein)g protein \(food.carbs)g carbs \(String(format: \"%.1f\", food.fat))g fat per 100g")
-                    .font(.subheadline)
+                    .fontWeight(.semibold)
+
+                HStack(spacing: 16) {
+                    Text("\(food.calories) kcal")
+                    Text("\(food.protein)g protein")
+                    if food.carbs > 0 { Text("\(food.carbs)g carbs") }
+                    if food.fat > 0 { Text("\(String(format: "%.1f", food.fat))g fat") }
+                }
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+                Text("per 100g")
+                    .font(.caption)
                     .foregroundColor(.secondary)
-                    .lineLimit(1)
             }
+
             Spacer()
-            Button(action: {
-                // Aktion hinzufügen
-            }) {
+
+            Button {
+                // add item action
+            } label: {
                 Image(systemName: "plus")
-                    .foregroundColor(.white)
-                    .padding(8)
-                    .background(Circle().foregroundColor(.blue))
+                    .font(.headline)
+                    .frame(width: 36, height: 36)
+                    .overlay(Circle().stroke(.primary, lineWidth: 2))
+                    .contentShape(Circle())
             }
+            .buttonStyle(.plain)
             .accessibilityLabel("Add \(food.name)")
         }
-        .padding()
+        .padding(16)
         .background(Color(.systemGray6))
-        .cornerRadius(8)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
-struct LogFoodView: View {
+struct FoodLogView: View {
+    @StateObject private var vm = FoodSearchViewModel()
     @State private var searchText = ""
-    private let foods = Food.mockData
-
-    private var filteredFoods: [Food] {
-        if searchText.isEmpty {
-            return foods
-        } else {
-            return foods.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
-        }
-    }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                    TextField("Search foods or scan barcode", text: $searchText)
-                        .accessibilityLabel("Search foods or scan barcode")
-                    Button(action: {
-                        // Barcode scannen
-                    }) {
+            VStack(spacing: 12) {
+                // Search + barcode
+                HStack(spacing: 12) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+                        TextField("Search foods or scan barcode", text: $searchText)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .onSubmit { vm.search(searchText) }
+                    }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color(.systemGray5))
+                    )
+
+                    Button {
+                        vm.search(searchText)
+                    } label: {
                         Image(systemName: "barcode.viewfinder")
-                            .foregroundColor(.blue)
+                            .font(.headline)
+                            .padding(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(Color(.label).opacity(0.9))
+                            )
+                            .foregroundColor(.white)
                     }
                     .accessibilityLabel("Scan barcode")
                 }
-                .padding(10)
-                .background(Color(.systemGray5))
-                .cornerRadius(10)
                 .padding(.horizontal)
-                .padding(.top)
+
+                if vm.isLoading {
+                    ProgressView("Loading…").padding(.top)
+                } else if let error = vm.error {
+                    Text("Error: \(error)")
+                        .foregroundColor(.red)
+                        .padding(.top)
+                } else if vm.foods.isEmpty, !searchText.isEmpty {
+                    Text("No results found")
+                        .foregroundColor(.secondary)
+                        .padding(.top)
+                }
 
                 ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(filteredFoods) { food in
+                    LazyVStack(spacing: 14) {
+                        ForEach(vm.foods) { food in
                             FoodRowView(food: food)
                         }
                     }
-                    .padding()
+                    .padding(.horizontal)
+                    .padding(.top, 4)
                 }
             }
             .navigationTitle("Log Food")
@@ -87,17 +120,8 @@ struct LogFoodView: View {
     }
 }
 
-extension Food {
-    static let mockData: [Food] = [
-        .init(name: "Chicken Breast, Grilled / Cooked", calories: 165, protein: 31, carbs: 0, fat: 3.6),
-        .init(name: "Salmon, Atlantic, Farmed", calories: 208, protein: 20, carbs: 0, fat: 13),
-        .init(name: "Broccoli, Raw", calories: 34, protein: 2, carbs: 7, fat: 0.4),
-        .init(name: "Almonds, Raw", calories: 579, protein: 21, carbs: 22, fat: 50)
-    ]
+#Preview {
+    FoodLogView()
 }
 
-struct LogFoodView_Previews: PreviewProvider {
-    static var previews: some View {
-        LogFoodView()
-    }
-}
+
