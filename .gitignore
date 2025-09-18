@@ -26,3 +26,4 @@ out/
 *.xcuserstate
 DerivedData/
 
+.aider*
