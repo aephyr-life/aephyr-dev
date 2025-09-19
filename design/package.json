@@ -1,0 +1,12 @@
+{
+  "name": "design-tokens",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "style-dictionary build",
+    "clean": "rm -rf build"
+  },
+  "devDependencies": {
+    "style-dictionary": "^5.0.4"
+  }
+}

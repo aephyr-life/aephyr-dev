@@ -56,7 +56,11 @@ struct FoodRowView: View {
 
 struct FoodLogView: View {
     @StateObject private var vm = FoodSearchViewModel()
-    @State private var searchText = ""
+    @State private var searchText: String
+
+    init(initialQuery: String = "") {
+        _searchText = State(initialValue: initialQuery)
+    }
 
     var body: some View {
         NavigationStack {
@@ -116,6 +120,11 @@ struct FoodLogView: View {
                 }
             }
             .navigationTitle("Log Food")
+            .task(id: searchText) {
+                if !searchText.isEmpty {
+                    vm.search(searchText)
+                }
+            }
         }
     }
 }
