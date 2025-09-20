@@ -28,6 +28,9 @@ boot-sim:
 	xcrun simctl boot "{{DEVICE}}" || true
 	open -a Simulator
 
+tokens-build:
+  cd ../design/tokens && npm run build
+  cp -f ../design/tokens/build/ios/BrandColors.swift ios/Aephyr/
 kmm-xc mode:
     #!/usr/bin/env bash
     set -euo pipefail
