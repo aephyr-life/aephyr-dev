@@ -2,7 +2,7 @@ model: o4-mini
 weak-model: gpt-4o-mini
 
 subtree-only: true
-auto-commits: true
+auto-commits: false
 #lint: true
 
 user-input-color: "#00cc00"
