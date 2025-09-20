@@ -22,11 +22,6 @@ struct DailyHeroCard: View {
 
     var body: some View {
         
-//        let proteinG: Int32 = vmhero?.protein_g ?? 0
-//        let fatG:     Int32 = vm.hero?.fat_g ?? 0
-//        let carbG:    Int32 = vm.hero?.carb_g ?? 0
-//        let kcal = vm.hero.map { Int($0.totalEnergyKcalRounded) } ?? 0
-        
         HStack(alignment: .center, spacing: 16) {
             // Donut
             DonutChart(segments: donutSegments, thickness: 20)

@@ -36,11 +36,19 @@ final class DailyVM: ObservableObject {
             print("Failed to load day: \(error)")
         }
     }
-
-//    func go(offsetDays: Int) async {
-//        // shift LocalDate in Kotlin (no minusDays on Swift side)
-//        self.day = AephyrSharedUtilKt.shiftDay(base: day, days: Int32(offsetDays))
-//        await load()
-//    }
+    
+    func remove(id: String) async {
+        do {
+            let ok = try await store.remove(id: id)
+            if ok.boolValue { await load() }
+        } catch {
+            print("Delete failed:", error)
+        }
+    }
+    
+    func shiftDay(offsetDays: Int) async {
+        self.day = IOSDateBridge.shared.shiftDay(date: day, days: Int32(offsetDays))
+        await load()
+    }
 }
 

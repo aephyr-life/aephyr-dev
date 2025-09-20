@@ -15,8 +15,11 @@ struct FoodRow: View {
                 
             }
             Spacer(minLength: 8)
+            
+            let kcal = Int(row.energyKcalRounded?.intValue ?? 0)
+            
             VStack(alignment: .trailing, spacing: 2) {
-                Text("\(row.energyKcalRounded) kcal")
+                Text("\(kcal) kcal")
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
                 if let g = row.grams.asInt {

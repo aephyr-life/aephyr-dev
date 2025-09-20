@@ -2,6 +2,7 @@ package aephyr.shared.ios.feature.logfood
 
 import aephyr.shared.feature.logfood.data.FoodStore
 import aephyr.shared.feature.logfood.data.aggregateHero
+import aephyr.shared.feature.logfood.model.FoodLogId
 import aephyr.shared.ios.util.IOSDateBridge.nsDateToLocalDate
 import platform.Foundation.NSArray
 import platform.Foundation.NSDate
@@ -15,6 +16,10 @@ class IOSFoodStore(private val delegate: FoodStore) {
             .sorted() // by your Comparable (consumedAt, loggedAt, name, id)
             .forEach { arr.addObject(it.toDTO(roundingKcalStep = roundingKcalStep)) }
         return arr
+    }
+
+    suspend fun remove(id: FoodLogId): Boolean {
+        return delegate.remove(id)
     }
 
     suspend fun heroForDTO(day: NSDate, roundingKcalStep: Int = 50): IOSAggregateHero {

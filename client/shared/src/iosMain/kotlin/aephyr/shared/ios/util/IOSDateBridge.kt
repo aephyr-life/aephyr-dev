@@ -29,9 +29,9 @@ object IOSDateBridge {
 
     fun shiftDay(
         date: NSDate,
-        days: Int,
-        timeZone: TimeZone = TimeZone.currentSystemDefault()
+        days: Int
     ): NSDate {
+        val timeZone = TimeZone.currentSystemDefault()
         val d0 = nsDateToLocalDate(date, timeZone)
         val d1 = d0.plus(DatePeriod(days = days))
         return localDateToNSDate(d1, timeZone)
