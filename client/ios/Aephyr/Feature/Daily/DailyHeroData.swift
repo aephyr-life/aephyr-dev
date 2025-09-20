@@ -27,16 +27,6 @@ struct DailyHeroCard: View {
             .init(label: "Carbs",   value: data.carbsG,   color: Color("MacroCarbs"))
         ]
     }
-    
-//    // Helper keeps the compiler happy
-//    private var cardBackground: some View {
-//        let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
-//        return ZStack {
-//            shape.fill(.ultraThinMaterial)          // base material
-//            shape.fill(Color.white.opacity(0.15))   // warm tint layer
-//        }
-//    }
-
 
     var body: some View {
         HStack(alignment: .center, spacing: 16) {

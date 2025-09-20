@@ -17,14 +17,22 @@ struct DailyView: View {
         ZStack {
             AephyrBackground()
             ScrollView {
-                VStack(spacing: 16) {
-                    DailyHeroCard(data: .init(kcal: 1430, proteinG: 90, fatG: 12, carbsG: 43))
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
-
-                    // Embed the list (use showsBuckets: false for a flat list)
-                    DailyFoodList(day: day, items: sample, showsBuckets: true)
-                        .frame(maxHeight: .infinity)
+                LazyVStack(spacing: 16, pinnedViews: []) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Today")
+                            .font(.title3.weight(.semibold))
+                            .padding(.horizontal, 16)
+                        DailyHeroCard(data: .init(kcal: 1430, proteinG: 90, fatG: 12, carbsG: 43))
+                            .padding(.horizontal, 16)
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Food log")
+                            .font(.title3.weight(.semibold))
+                            .padding(.horizontal, 16)
+                        DailyFoodList(day: day, items: sample, showsBuckets: true)
+                            .padding(.horizontal, 16)
+                    }
+                    
                 }
             }
         }
