@@ -7,7 +7,6 @@ plugins {
 }
 
 kotlin {
-    // ✅ Force the default hierarchy template
     applyDefaultHierarchyTemplate()
 
     // iOS targets
@@ -35,11 +34,11 @@ kotlin {
                 implementation(libs.ktor.client.content.negotiation)
                 implementation(libs.ktor.serialization.kotlinx.json)
                 implementation(libs.ktor.client.logging)
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
             }
         }
         val commonTest by getting
 
-        // ✅ Now this exists thanks to the template
         val iosMain by getting {
             dependencies {
                 implementation(libs.ktor.client.darwin)
@@ -58,4 +57,3 @@ tasks.register("packForXcode") {
         println("XCFramework (Debug): ${xc.absolutePath}")
     }
 }
-

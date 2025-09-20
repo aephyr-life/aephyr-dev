@@ -31,6 +31,8 @@ boot-sim:
 tokens-build:
   cd ../design/tokens && npm run build
   cp -f ../design/tokens/build/ios/BrandColors.swift ios/Aephyr/
+
+# build 'release' or 'debug'
 kmm-xc mode:
     #!/usr/bin/env bash
     set -euo pipefail

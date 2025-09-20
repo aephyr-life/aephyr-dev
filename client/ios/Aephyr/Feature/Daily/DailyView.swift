@@ -1,35 +1,43 @@
 import SwiftUI
+import AephyrShared
 
 struct DailyView: View {
-    let data = DailyHeroData(kcal: 1430, proteinG: 90, fatG: 12, carbsG: 43)
+    @StateObject private var vm: DailyVM
+    @State private var isLoading = true
+    
+    init(store: IOSFoodStore = IOSFoodStoreFactory().mock(), day: Date = Date()) {
+        _vm = StateObject(wrappedValue: DailyVM(store: store, day: day))
+    }
 
     var body: some View {
-        let anchorDate = Date()
-        let day = DietDay(anchorDate)
-        let sample: [LoggedFood] = [
-            .init(id: UUID(), day: day, timeOfDay: Calendar.current.date(bySettingHour: 8, minute: 10, second: 0, of: anchorDate),
-                  name: "Greek yogurt", grams: 200, kcal: 150, loggedAt: Date()),
-            .init(id: UUID(), day: day, timeOfDay: Calendar.current.date(bySettingHour: 13, minute: 5, second: 0, of: anchorDate),
-                  name: "Chicken salad", grams: 350, kcal: 540, loggedAt: Date()),
-            .init(id: UUID(), day: day, timeOfDay: nil,
-                  name: "Protein bar", grams: 60, kcal: 220, loggedAt: Date())
-        ]
+       
         ZStack {
             AephyrBackground()
             ScrollView {
                 LazyVStack(spacing: 16, pinnedViews: []) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Today")
-                            .font(.title3.weight(.semibold))
+                            .font(.largeTitle.weight(.semibold))
                             .padding(.horizontal, 16)
-                        DailyHeroCard(data: .init(kcal: 1430, proteinG: 90, fatG: 12, carbsG: 43))
-                            .padding(.horizontal, 16)
+                            .padding(.vertical, 16)
+                        Group {
+                           if isLoading {
+                               DailyHeroSkeleton()
+                           } else if let hero = vm.hero {
+                               DailyHeroCard(data: hero)
+                           } else {
+                               DailyHeroEmpty()
+                           }
+                        }
+                        .padding(.horizontal, 16)
+                        .task {
+                                    isLoading = true
+                                    await vm.load()
+                                    isLoading = false
+                        }
                     }
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Food log")
-                            .font(.title3.weight(.semibold))
-                            .padding(.horizontal, 16)
-                        DailyFoodList(day: day, items: sample, showsBuckets: true)
+                        DailyFoodList(vm: vm, showsBuckets: true)
                             .padding(.horizontal, 16)
                     }
                     
@@ -38,6 +46,8 @@ struct DailyView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.automatic, for: .navigationBar)
+        .task { await vm.load() }
+        .refreshable { await vm.load() }
         
     }
 }
