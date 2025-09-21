@@ -48,12 +48,6 @@ kotlin {
     }
 }
 
- // Optional: disable main-thread-only enforcement for ObjC suspend exports
- targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().all {
-     binaries.withType<org.jetbrains.kotlin.gradle.plugin.mpp.Framework>().all {
-     }
- }
-
 // Convenience task for Xcode builds
 tasks.register("packForXcode") {
     group = "build"
