@@ -7,8 +7,10 @@ struct DashboardView: View {
     @StateObject private var vm: DashboardVM
     @State private var isLoading = true
 
-    init(store: FoodStore = FoodStore.mock(), day: Date = Date()) {
-        _vm = StateObject(wrappedValue: DashboardVM(store: store, day: day))
+    init(repo: AephyrSharedDashboardRepository? = nil) {
+        let repository = repo ?? MockDashboardRepository()
+        let facade = AephyrSharedDashboardFacade(repo: repository)
+        _vm = StateObject(wrappedValue: DashboardVM(facade: facade))
     }
 
     var body: some View {
