@@ -11,14 +11,18 @@ import AephyrShared
 
 struct DashboardHeroCard: View {
     let data: DashboardHero
+    @Environment(\.energyUnit) private var energyUnit
 
     private var donutSegments: [DonutChart.Segment] {
-            return [
-                .init(label: "Protein", value: data.macros.proteinG, color: Color("MacroProtein")),
-                .init(label: "Fat",     value: data.macros.fatG, color: Color("MacroFat")),
-                .init(label: "Carbs",   value: data.macros.carbG, color: Color("MacroCarbs"))
-            ]
-        }
+        let p = data.macros.protein.converted(to: .grams).value
+        let f = data.macros.fat.converted(to: .grams).value
+        let c = data.macros.carb.converted(to: .grams).value
+        return [
+            .init(label: "Protein", value: p, color: Color("MacroProtein")),
+            .init(label: "Fat",     value: f, color: Color("MacroFat")),
+            .init(label: "Carbs",   value: c, color: Color("MacroCarbs"))
+        ]
+    }
 
     var body: some View {
         
@@ -32,21 +36,37 @@ struct DashboardHeroCard: View {
             VStack(alignment: .leading, spacing: 14) {
                 // Big kcal line
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text("\(data.totalEnergyKcalRounded)")
+                    let e = data.energy.converted(to: energyUnit.unit)
+                    Text("\(Int(e.value.rounded()))")
                         .font(.system(size: 44, weight: .bold))
                         .monospacedDigit()
-                    Text("kcal")
+                    Text(e.unit.symbol)
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
 
                 // Three columns: protein / fat / carbs
                 HStack(alignment: .top) {
-                    StatColumn(title: "protein", value: data.protein_g, unit: "g", color: Color("MacroProtein"))
+                    StatColumn(
+                        title: "Protein",
+                        value: Int32(data.macros.protein.converted(to: .grams).value.rounded()),
+                        unit: "g",
+                        color: Color("MacroProtein")
+                    )
                     Spacer(minLength: 12)
-                    StatColumn(title: "fats", value: data.fat_g, unit: "g", color: Color("MacroFat"))
+                    StatColumn(
+                        title: "Fat",
+                        value: Int32(data.macros.fat.converted(to: .grams).value.rounded()),
+                        unit: "g",
+                        color: Color("MacroFat")
+                    )
                     Spacer(minLength: 12)
-                    StatColumn(title: "carbs", value: data.carb_g, unit: "g", color: Color("MacroCarbs"))
+                    StatColumn(
+                        title: "Carbs",
+                        value: Int32(data.macros.carb.converted(to: .grams).value.rounded()),
+                        unit: "g",
+                        color: Color("MacroCarbs")
+                    )
                 }
             }
         }

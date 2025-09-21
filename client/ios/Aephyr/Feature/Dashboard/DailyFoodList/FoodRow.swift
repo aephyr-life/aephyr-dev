@@ -2,8 +2,7 @@ import SwiftUI
 
 struct FoodRow: View {
     let row: FoodStore.LoggedItem
-    /// Pick your default; swap to .kJ if you prefer
-    var energyUnit: EnergyUnit = .kcal
+    @Environment(\.energyUnit) private var energyUnit
 
     private func timeDate(from dm: DietMoment) -> Date? {
         guard let mins = dm.timeMinutes else { return nil }
@@ -28,23 +27,15 @@ struct FoodRow: View {
 
             // RIGHT: energy + grams
             VStack(alignment: .trailing, spacing: 2) {
-                if let e = row.energy {
-                    let display = (energyUnit == .kcal)
-                        ? e.converted(to: .kilocalories)
-                        : e.converted(to: .kilojoules)
-                    Text(display, format: .measurement(width: .narrow, usage: .asProvided))
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("—")
-                        .foregroundStyle(.tertiary)
-                }
+                
+                Text(row.energy.map { $0.formatted(using: energyUnit) } ?? "—")
+                      .monospacedDigit()
+                      .foregroundStyle(.secondary)
+                
+                Text(row.mass.map { $0.formatted() } ?? "–")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
 
-                if let g = row.grams {
-                    Text(g, format: .measurement(width: .narrow, usage: .nutrition)) // e.g. "60 g"
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
             }
         }
         .contentShape(Rectangle()) // keep whole row tappable

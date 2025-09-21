@@ -15,13 +15,6 @@ struct MacrosSummary: Equatable {
     let fat: Measurement<UnitMass>
     let carb: Measurement<UnitMass>
 
-    // Convenience init from grams
-    init(proteinG: Double, fatG: Double, carbG: Double) {
-        self.protein = Measurement(value: proteinG, unit: .grams)
-        self.fat     = Measurement(value: fatG,     unit: .grams)
-        self.carb    = Measurement(value: carbG,    unit: .grams)
-    }
-
     // Grams as Doubles (converted for safety if units ever change)
     private var proteinG: Double { protein.converted(to: .grams).value }
     private var fatG: Double     { fat.converted(to: .grams).value }
@@ -56,24 +49,34 @@ struct DashboardHero: Equatable {
 }
 
 extension DashboardHero {
+    
+    
+    
     static func make(from items: [FoodStore.LoggedItem]) -> DashboardHero {
-        // Sum energy in kJ (fallback: 0 if missing)
-        let totalKJ = items
-            .compactMap { $0.energy?.converted(to: .kilojoules).value }
-            .reduce(0, +)
-        let energy = Measurement(value: totalKJ, unit: .kilojoules)
-
-        // Sum macros in grams (nil → 0)
-        func sum(_ key: (FoodStore.LoggedItem) -> Double?) -> Double {
-            items.compactMap(key).reduce(0.0, +)
+        
+        func totalEnergy(in unit: UnitEnergy) -> Measurement<UnitEnergy> {
+          let zero = Measurement(value: 0, unit: unit)
+          return items.reduce(into: zero) { sum, item in
+            guard let e = item.energy else { return }
+            sum = sum + e.converted(to: unit)
+          }
         }
-        let p = sum { $0.proteinG }
-        let f = sum { $0.fatG }
-        let c = sum { $0.carbG }
+        
+        struct Totals {
+          var carb    = Measurement<UnitMass>(value: 0, unit: .grams)
+          var protein = Measurement<UnitMass>(value: 0, unit: .grams)
+          var fat     = Measurement<UnitMass>(value: 0, unit: .grams)
+        }
 
+        let totals = items.reduce(into: Totals()) { acc, item in
+          if let m = item.carb?.converted(to: .grams)    { acc.carb.value    += m.value }
+          if let p = item.protein?.converted(to: .grams) { acc.protein.value += p.value }
+          if let f = item.fat?.converted(to: .grams)     { acc.fat.value     += f.value }
+        }
+        
         return DashboardHero(
-            energy: energy,
-            macros: MacrosSummary(proteinG: p, fatG: f, carbG: c)
+            energy: totalEnergy(in: UnitEnergy.kilojoules), // TODO use user preference
+            macros: MacrosSummary(protein: totals.protein, fat: totals.fat, carb: totals.carb)
         )
     }
 }

@@ -10,10 +10,11 @@ import SwiftUI
 import AephyrShared
 
 struct FoodDetailView: View {
-    let item: IOSLoggedFood
+    let item: FoodStore.LoggedItem
     let onDelete: () async -> Bool
 
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismiss)    private var dismiss
+    @Environment(\.energyUnit) private var energyUnit
     @State private var confirming = false
     @State private var deleting = false
     @State private var error: String?
@@ -21,28 +22,46 @@ struct FoodDetailView: View {
     var body: some View {
         List {
             Section(header: Text("Food")) {
-                HStack { Text("Name"); Spacer(); Text(item.name).foregroundStyle(.secondary) }
-                if let g = item.grams as? Int {
-                    HStack { Text("Portion"); Spacer(); Text("\(g) g").foregroundStyle(.secondary) }
+                HStack {
+                    Text("Name")
+                    Spacer()
+                    Text(item.name)
+                        .foregroundStyle(.secondary)
+                }
+                if let mass = item.mass {
+                    HStack {
+                        Text("Portion")
+                        Spacer()
+                        Text(
+                            mass.converted(to: .grams),
+                            format: .measurement(width: .narrow, usage: .asProvided)
+                        )
+                        .foregroundStyle(.secondary)
+                    }
                 }
             }
             Section(header: Text("Energy")) {
-                if let kcal = item.energyKcalRounded as? Int {
-                    HStack { Text("Calories"); Spacer(); Text("\(kcal) kcal").foregroundStyle(.secondary) }
-                }
-                if let kj = item.energyKJ as? Int {
-                    HStack { Text("Kilojoules"); Spacer(); Text("\(kj) kJ").foregroundStyle(.secondary) }
+                if let energy = item.energy {
+                    HStack {
+                        Text("Energy")
+                        Spacer()
+                        Text(
+                            energy.converted(to: energyUnit.unit),
+                            format: .measurement(width: .narrow, usage: .asProvided)
+                        )
+                        .foregroundStyle(.secondary)
+                    }
                 }
             }
             Section(header: Text("Macros")) {
-                if let p = item.protein_g as? Double {
-                    row("Protein", "\(Int(p)) g")
+                if let protein = item.protein {
+                    row("Protein", protein)
                 }
-                if let f = item.fat_g as? Double {
-                    row("Fat", "\(Int(f)) g")
+                if let fat = item.fat {
+                    row("Fat", fat)
                 }
-                if let c = item.carb_g as? Double {
-                    row("Carbs", "\(Int(c)) g")
+                if let carb = item.carb {
+                    row("Carbs", carb)
                 }
             }
             Section {
@@ -77,7 +96,17 @@ struct FoodDetailView: View {
         }
     }
 
-    private func row(_ a: String, _ b: String) -> some View {
-        HStack { Text(a); Spacer(); Text(b).foregroundStyle(.secondary) }
+    @ViewBuilder
+    private func row(_ label: String, _ measurement: Measurement<UnitMass>) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            Text(
+                measurement.converted(to: .grams),
+                format: .measurement(width: .narrow, usage: .asProvided)
+            )
+            .foregroundStyle(.secondary)
+            .monospacedDigit()
+        }
     }
 }

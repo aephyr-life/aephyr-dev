@@ -1,11 +1,11 @@
 import SwiftUI
 import AephyrShared
 
+@MainActor
 struct DashboardView: View {
 
     @StateObject private var vm: DashboardVM
     @State private var isLoading = true
-    
 
     init(store: FoodStore = FoodStore.mock(), day: Date = Date()) {
         _vm = StateObject(wrappedValue: DashboardVM(store: store, day: day))
@@ -15,68 +15,73 @@ struct DashboardView: View {
         ZStack {
             AephyrBackground()
 
-            // page content keyed by day (so it transitions)
             content
-                .id(vm.day)
-                .animation(isLoading ? .none : .easeInOut(duration: 0.40), value: vm.day)
+                .opacity(isLoading ? 0.5 : 1.0)
 
+            if isLoading {
+                ProgressView()
+                    .progressViewStyle(.circular)
+            }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .task {
-            isLoading = true
-            await vm.load()
-            isLoading = false
+        .navigationTitle(todayTitle)
+        .task { @MainActor in
+            await reload()
         }
-        .refreshable {
-            isLoading = true
-            await vm.load()
-            isLoading = false
+        .refreshable { @MainActor in
+            await reload()
         }
     }
 
     // MARK: - UI
     @ViewBuilder private var content: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Today")
-                .font(.largeTitle.weight(.semibold))
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-
-            List {
-                // HERO
-                Section {
-                    if isLoading {
-                        DashboardHeroSkeleton()
-                    } else if let hero = vm.hero {
-                        DashboardHeroCard(data: hero)
-                    } else {
-                        DashboardHeroEmpty()
-                    }
+        List {
+            // HERO
+            Section {
+                if isLoading {
+                    DashboardHeroSkeleton()
+                } else if let hero = vm.hero {
+                    DashboardHeroCard(data: hero)
+                } else {
+                    DashboardHeroEmpty()
                 }
-                //.listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-
-                // ENTRIES (navigate to detail; delete there)
-                Section {
-                    ForEach(vm.entries, id: \.id) { item in
-                        NavigationLink {
-                            FoodDetailView(
-                                item: item,
-                                onDelete: { await vm.remove(id: item.id) }
-                            )
-                        } label: {
-                            FoodRow(row: item)
-                        }
-                        //.listRowBackground(Color.clear)
-                        //.listRowSeparator(.hidden)
-                    }
-                }
-                //.listRowBackground(Color.clear)
             }
-            //.listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Color.clear)
+            .listRowSeparator(.hidden)
+
+            // ENTRIES (navigate to detail; delete there)
+            Section {
+                ForEach(vm.entries, id: \.id) { item in
+                    NavigationLink {
+                        FoodDetailView(
+                            item: item,
+                            onDelete: { await vm.remove(id: item.id) }
+                        )
+                    } label: {
+                        FoodRow(row: item)
+                    }
+                }
+            }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.clear)
+    }
+
+    // MARK: - Helpers
+    private var todayTitle: String {
+        let df = DateFormatter()
+        df.locale = .current
+        df.doesRelativeDateFormatting = true
+        df.dateStyle = .medium
+        df.timeStyle = .none
+        return df.string(from: Date()) // always “Today” (localized) when applicable
+    }
+
+    private func reload() async {
+        precondition(Thread.isMainThread, "reload() not on main thread")
+        isLoading = true
+        await vm.load()
+        isLoading = false
     }
 }
 

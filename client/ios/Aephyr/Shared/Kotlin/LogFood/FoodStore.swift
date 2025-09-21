@@ -28,7 +28,7 @@ final class FoodStore {
         let name:       String
         let consumedAt: DietMoment
 
-        let grams:      Measurement<UnitMass>?
+        let mass:       Measurement<UnitMass>?
         let energy:     Measurement<UnitEnergy>?    // canonical kJ in value, convert at display
 
         let protein:    Measurement<UnitMass>?
@@ -157,7 +157,7 @@ final class FoodStore {
             id: asString(lf.id),
             name: asString(lf.name),
             consumedAt: moment,
-            grams: gramsMeas,
+            mass: gramsMeas,
             energy: energyMeas,
             protein: proteinM,
             fat: fatM,
