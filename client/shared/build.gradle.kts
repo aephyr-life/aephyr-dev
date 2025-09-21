@@ -35,7 +35,7 @@ kotlin {
                 implementation(libs.ktor.serialization.kotlinx.json)
                 implementation(libs.ktor.client.logging)
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
-+                implementation("com.rickclephas.kmp:kmp-nativecoroutines-core:1.0.0-ALPHA-36")
+                implementation("com.rickclephas.kmp:kmp-nativecoroutines-core:1.0.0-ALPHA-36")
             }
         }
         val commonTest by getting
