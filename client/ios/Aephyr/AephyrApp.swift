@@ -12,11 +12,7 @@ struct AephyrApp: App {
     init() { print("AephyrApp.init") }
     var body: some Scene {
         WindowGroup {
-            DailyView()
-//            DashboardView()
-//            FoodLogView()
-//            ContentView()
-//                .onAppear { print("ContentView appeared") }
+            DashboardView()
         }
     }
 }
