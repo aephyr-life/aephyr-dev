@@ -35,6 +35,7 @@ kotlin {
                 implementation(libs.ktor.serialization.kotlinx.json)
                 implementation(libs.ktor.client.logging)
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
++                implementation("com.rickclephas.kmp:kmp-nativecoroutines-core:1.0.0-ALPHA-36")
             }
         }
         val commonTest by getting
@@ -46,6 +47,13 @@ kotlin {
         }
     }
 }
+
++// Optional: disable main-thread-only enforcement for ObjC suspend exports
++targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().all {
++    binaries.withType<org.jetbrains.kotlin.gradle.plugin.mpp.Framework>().all {
++        binaryOption("objcExportSuspendFunctionLaunchThreadRestriction", "none")
++    }
++}
 
 // Convenience task for Xcode builds
 tasks.register("packForXcode") {
