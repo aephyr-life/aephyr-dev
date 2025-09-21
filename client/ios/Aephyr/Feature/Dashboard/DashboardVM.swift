@@ -15,8 +15,10 @@ final class DashboardVM: ObservableObject {
         self.day = day
     }
 
+    /// Always run on the main actor so we can call Kotlin suspend bridges.
     func load() async {
         do {
+            assert(Thread.isMainThread, "🚨 not on main thread!")
             let list = try await store.entries(for: day)
             self.entries = list
             self.hero = DashboardHero.make(from: list)
