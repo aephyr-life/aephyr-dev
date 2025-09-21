@@ -61,6 +61,26 @@ struct DashboardView: View {
             }
             .padding(.vertical, 12)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.clear)
+    }
+
+    // MARK: - Helpers
+    private var todayTitle: String {
+        let df = DateFormatter()
+        df.locale = .current
+        df.doesRelativeDateFormatting = true
+        df.dateStyle = .medium
+        df.timeStyle = .none
+        return df.string(from: Date()) // always “Today” (localized) when applicable
+    }
+
+    private func reload() async {
+        precondition(Thread.isMainThread, "reload() not on main thread")
+        isLoading = true
+        await vm.load()
+        isLoading = false
     }
 
     private struct Card<Content: View>: View {
