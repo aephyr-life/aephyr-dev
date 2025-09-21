@@ -29,7 +29,6 @@ struct DashboardView: View {
         .refreshable { @MainActor in await vm.reload() }
     }
 
-    // MARK: - UI
     @ViewBuilder private var content: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -66,21 +65,36 @@ struct DashboardView: View {
         .background(Color.clear)
     }
 
-    // MARK: - Helpers
     private var todayTitle: String {
         let df = DateFormatter()
         df.locale = .current
         df.doesRelativeDateFormatting = true
         df.dateStyle = .medium
         df.timeStyle = .none
-        return df.string(from: Date()) // always “Today” (localized) when applicable
+        return df.string(from: Date())
     }
+}
 
-    private func reload() async {
-        precondition(Thread.isMainThread, "reload() not on main thread")
-        isLoading = true
-        await vm.load()
-        isLoading = false
+// Lightweight row that renders the KMM FoodItem directly.
+// Replace with your nice FoodRow once mapping is in place.
+private struct FoodRowKMMAdapter: View {
+    let item: FoodItem
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.name)
+                Text("\(item.grams) g")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("\(item.kcal) kcal")
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .contentShape(Rectangle())
     }
 
     private struct Card<Content: View>: View {
