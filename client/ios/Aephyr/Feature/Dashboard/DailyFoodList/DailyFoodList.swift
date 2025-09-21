@@ -3,6 +3,8 @@ import SwiftUI
 import AephyrShared
 
 struct DailyFoodList: View {
+
+    
     @ObservedObject var vm: DashboardVM
     var showsBuckets: Bool = true
 

@@ -1,53 +1,45 @@
 import Foundation
-import Combine
 import AephyrShared
-import KMPNativeCoroutinesCore
 import KMPNativeCoroutinesAsync
 
 @MainActor
 final class DashboardVM: ObservableObject {
-    @Published var isLoading: Bool = true
-    @Published var hero: AephyrSharedHero?
-    @Published var entries: [AephyrSharedFoodItem] = []
+    @Published var isLoading = true
+    @Published var hero: Hero?
+    @Published var entries: [FoodItem] = []
 
-    private let facade: AephyrSharedDashboardFacade
+    private let facade: DashboardFacade
     private var bindTask: Task<Void, Never>?
 
-    init(facade: AephyrSharedDashboardFacade) {
+    init(facade: DashboardFacade) {
         self.facade = facade
         bindState()
     }
 
-    deinit {
-        bindTask?.cancel()
-    }
+    deinit { bindTask?.cancel() }
 
     private func bindState() {
-        bindTask = Task {
-            for try await ui in asyncSequence(for: facade.state) {
-                self.isLoading = ui.isLoading
-                self.hero = ui.hero
-                self.entries = ui.entries
+        bindTask = Task { @MainActor [weak self, facade] in
+            do {
+                // Let the type infer to NativeFlowAsyncSequence
+                for try await ui in asyncSequence(for: facade.observeState()) {
+                    guard let self else { return }
+                    self.isLoading = ui.isLoading
+                    self.hero = ui.hero
+                    self.entries = ui.entries
+                }
+            } catch {
+                // optional: log/show error
             }
         }
     }
 
-    /// Trigger a manual refresh
     func reload() async {
-        do {
-            try await asyncFunction(for: facade.refresh())
-        } catch {
-            // handle error if needed
-        }
+        do { try await asyncFunction(for: facade.refresh()) } catch { /* handle */ }
     }
 
-    /// Remove an item by id
     func remove(id: String) async {
-        do {
-            try await asyncFunction(for: facade.remove(id: id))
-        } catch {
-            // handle error if needed
-        }
+        do { try await asyncFunction(for: facade.remove(id: id)) } catch { /* handle */ }
     }
 }
 

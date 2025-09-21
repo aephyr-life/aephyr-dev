@@ -3,13 +3,11 @@ import AephyrShared
 
 @MainActor
 struct DashboardView: View {
-
     @StateObject private var vm: DashboardVM
-    @State private var isLoading = true
 
-    init(repo: AephyrSharedDashboardRepository? = nil) {
+    init(repo: DashboardRepository? = nil) {
         let repository = repo ?? MockDashboardRepository()
-        let facade = AephyrSharedDashboardFacade(repo: repository)
+        let facade = DashboardFacade(repo: repository) // Kotlin secondary ctor that injects MainScope
         _vm = StateObject(wrappedValue: DashboardVM(facade: facade))
     }
 
@@ -18,49 +16,34 @@ struct DashboardView: View {
             AephyrBackground()
 
             content
-                .opacity(isLoading ? 0.5 : 1.0)
+                .opacity(vm.isLoading ? 0.5 : 1.0)
 
-            if isLoading {
-                ProgressView()
-                    .progressViewStyle(.circular)
+            if vm.isLoading {
+                ProgressView().progressViewStyle(.circular)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle(todayTitle)
-        .task { @MainActor in
-            await reload()
-        }
-        .refreshable { @MainActor in
-            await reload()
-        }
+        .task { @MainActor in await vm.reload() }
+        .refreshable { @MainActor in await vm.reload() }
     }
 
-    // MARK: - UI
     @ViewBuilder private var content: some View {
         List {
-            // HERO
+            // HERO — temporarily show empty until we map KMM -> DashboardHero
             Section {
-                if isLoading {
+                if vm.isLoading {
                     DashboardHeroSkeleton()
-                } else if let hero = vm.hero {
-                    DashboardHeroCard(data: hero)
                 } else {
                     DashboardHeroEmpty()
                 }
             }
             .listRowSeparator(.hidden)
 
-            // ENTRIES (navigate to detail; delete there)
+            // ENTRIES — simple KMM adapter row (no detail nav yet)
             Section {
                 ForEach(vm.entries, id: \.id) { item in
-                    NavigationLink {
-                        FoodDetailView(
-                            item: item,
-                            onDelete: { await vm.remove(id: item.id) }
-                        )
-                    } label: {
-                        FoodRow(row: item)
-                    }
+                    FoodRowKMMAdapter(item: item)
                 }
             }
         }
@@ -69,21 +52,36 @@ struct DashboardView: View {
         .background(Color.clear)
     }
 
-    // MARK: - Helpers
     private var todayTitle: String {
         let df = DateFormatter()
         df.locale = .current
         df.doesRelativeDateFormatting = true
         df.dateStyle = .medium
         df.timeStyle = .none
-        return df.string(from: Date()) // always “Today” (localized) when applicable
+        return df.string(from: Date())
     }
+}
 
-    private func reload() async {
-        precondition(Thread.isMainThread, "reload() not on main thread")
-        isLoading = true
-        await vm.load()
-        isLoading = false
+// Lightweight row that renders the KMM FoodItem directly.
+// Replace with your nice FoodRow once mapping is in place.
+private struct FoodRowKMMAdapter: View {
+    let item: FoodItem
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.name)
+                Text("\(item.grams) g")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("\(item.kcal) kcal")
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .contentShape(Rectangle())
     }
 }
 

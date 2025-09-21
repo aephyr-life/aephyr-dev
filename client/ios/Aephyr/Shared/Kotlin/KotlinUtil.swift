@@ -69,6 +69,32 @@ extension DietMoment {
     }
 }
 
+extension FoodStore.LoggedItem {
+    /// Bridge KMM `FoodItem` -> Swift `LoggedItem`.
+    /// - Parameters:
+    ///   - k: The KMM item.
+    ///   - consumedAt: Your app's DietMoment for this entry (required).
+    ///   - loggedAt: When this was logged (defaults to now).
+    init(_ k: FoodItem, consumedAt: DietMoment, loggedAt: Date = Date()) {
+        let mass: Measurement<UnitMass>? =
+            k.grams > 0 ? Measurement(value: Double(k.grams), unit: .grams) : nil
+
+        let energy: Measurement<UnitEnergy>? =
+            k.kcal > 0 ? Measurement(value: Double(k.kcal), unit: .kilocalories) : nil
+
+        self.init(
+            id: k.id,
+            name: k.name,
+            consumedAt: consumedAt,
+            mass: mass,
+            energy: energy,
+            protein: nil,
+            fat: nil,
+            carb: nil,
+            loggedAt: loggedAt
+        )
+    }
+}
 
 @inline(__always) func KInt(_ v: KotlinInt?) -> Int? { v.map { Int($0.int32Value) } }
 @inline(__always) func KDouble(_ v: KotlinDouble?) -> Double? { v.map { $0.doubleValue } }
