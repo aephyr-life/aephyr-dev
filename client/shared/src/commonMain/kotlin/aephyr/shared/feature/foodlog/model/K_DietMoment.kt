@@ -1,4 +1,4 @@
-package aephyr.shared.feature.logfood.model
+package aephyr.shared.feature.foodlog.model
 
 
 import kotlinx.datetime.LocalDate
