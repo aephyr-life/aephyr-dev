@@ -4,14 +4,11 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.google.devtools.ksp)
-    alias(libs.plugins.rickclephas.kmp.nativecoroutines)
 }
 
 kotlin {
     applyDefaultHierarchyTemplate()
 
-    // 1) Allow @ObjCName usage required by the NativeCoroutines plugin/codegen
     sourceSets.all {
         languageSettings.optIn("kotlin.experimental.ExperimentalObjCName")
     }
@@ -45,7 +42,6 @@ kotlin {
                 implementation(libs.ktor.client.content.negotiation)
                 implementation(libs.ktor.serialization.kotlinx.json)
                 implementation(libs.ktor.client.logging)
-                implementation(libs.rickclephas.kmp.nativecoroutines.core)
             }
         }
         val commonTest by getting

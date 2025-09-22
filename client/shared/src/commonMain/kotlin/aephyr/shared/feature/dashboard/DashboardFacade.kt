@@ -1,7 +1,5 @@
 package aephyr.shared.feature.dashboard
 
-import com.rickclephas.kmp.nativecoroutines.NativeCoroutines
-import com.rickclephas.kmp.nativecoroutines.NativeCoroutinesState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +20,6 @@ class DashboardFacade(
     private val _state = MutableStateFlow(DashboardUi())
     val state: StateFlow<DashboardUi> = _state
 
-    @NativeCoroutines
     fun observeState(): Flow<DashboardUi> = state
 
     init {
@@ -33,7 +30,6 @@ class DashboardFacade(
     }
 
     /** One-shot load for "today". */
-    @NativeCoroutines
     suspend fun refresh() {
         _state.update { it.copy(isLoading = true) }
 
@@ -50,7 +46,6 @@ class DashboardFacade(
     }
 
     /** Remove an item and refresh list. */
-    @NativeCoroutines
     suspend fun remove(id: String) {
         withContext(Dispatchers.Default) {
             repo.remove(id)
