@@ -8,7 +8,7 @@ server_dir := root / "server"
 client_dir := root / "client"
 
 KOTLIN_DIR := client_dir / "shared"
-# SCALA_ID := 
+# SCALA_ID :=
 XCODE_PROJECT := client_dir / "ios/Aephyr.xcodeproj"
 XCODE_SCHEME := "Aephyr"
 IOS_DEST := "platform=iOS Simulator,name=iPhone 17 Pro"
@@ -20,21 +20,24 @@ server *args:
 client *args:
 	direnv exec {{client_dir}} just {{args}}
 
-build-swift:
-    bash -lc 'set -o pipefail; xcodebuild \
-	  -project "{{XCODE_PROJECT}}" \
-	  -scheme "{{XCODE_SCHEME}}" \
-	  -configuration Debug \
-	  -sdk iphonesimulator \
-	  -destination "{{IOS_DEST}}" \
-	  build | xcbeautify |& ./bin/on_fail.sh'
+test-kotlin:
+  ./bin/on_fail.sh client/shared/gradlew -p client/shared clean assemble check --stacktrace
 
-test-swift:
-    bash -lc 'set -o pipefail; xcodebuild \
-        -project "{{XCODE_PROJECT}}" \
-        -scheme "{{XCODE_SCHEME}}" \
-        -destination "{{IOS_DEST}}" \
-        test | xcbeautify |& ./bin/on_fail.sh'
+# build-swift:
+#   bash -lc 'set -o pipefail; xcodebuild \
+#     -project "{{XCODE_PROJECT}}" \
+#     -scheme "{{XCODE_SCHEME}}" \
+#     -configuration Debug \
+#     -sdk iphonesimulator \
+#     -destination "{{IOS_DEST}}" \
+#     build | xcbeautify |& ./bin/on_fail.sh'
+
+# test-swift:
+#   bash -lc 'set -o pipefail; xcodebuild \
+#     -project "{{XCODE_PROJECT}}" \
+#     -scheme "{{XCODE_SCHEME}}" \
+#     -destination "{{IOS_DEST}}" \
+#     test | xcbeautify |& ./bin/on_fail.sh'
 
 # creates a new branch
 [group('dev')]
