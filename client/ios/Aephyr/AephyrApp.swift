@@ -9,14 +9,13 @@ import SwiftUI
 
 @main
 struct AephyrApp: App {
-    init() { print("AephyrApp.init") }
+    
+    @AppStorage("energyUnit")
+    private var selectedRaw: String = EnergyUnit.kilocalories.rawValue
+    
     var body: some Scene {
         WindowGroup {
-            DailyView()
-//            DashboardView()
-//            FoodLogView()
-//            ContentView()
-//                .onAppear { print("ContentView appeared") }
+            DashboardView()
         }
     }
 }

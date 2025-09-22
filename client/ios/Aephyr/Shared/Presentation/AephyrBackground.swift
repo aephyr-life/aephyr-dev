@@ -11,30 +11,25 @@ import SwiftUI
 struct AephyrBackground: View {
     var body: some View {
         ZStack {
-            // 1) Exaggerated gradient (so you SEE it first)
             LinearGradient(
                 colors: [
-                    Color("BackgroundStart"),   // e.g. #DED7CE
-                    Color("BackgroundEnd")     // e.g. #D3CBBF (a touch darker/greener)
+                    Color("BackgroundStart"),
+                    Color("BackgroundMid"),
+                    Color("BackgroundEnd")
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
 
-            // 2) Texture – make it obvious first, then reduce
             Group {
-                // TEMP: show a checker if the asset is missing/misspelled
-                // Comment this out when your Paper image shows.
-                //Image(systemName: "checkmark.seal.fill")
-                //  .resizable().scaledToFill().opacity(0.3)
 
-                Image("white-texture")                    // EXACT asset name
+                Image("white-texture")
                     .resizable(resizingMode: .tile)
                     .renderingMode(.original)
-                    .saturation(0)                // pure grayscale
-                    .opacity(0.22)                // start high so it’s visible
-                    .blendMode(.multiply)         // sits naturally on beige
+                    .saturation(0)
+                    .opacity(0.25)
+                    .blendMode(.multiply)
             }
             .ignoresSafeArea()
 

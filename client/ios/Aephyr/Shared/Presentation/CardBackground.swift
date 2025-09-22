@@ -12,7 +12,7 @@ struct CardBackground: View {
         let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
         return ZStack {
             shape.fill(.ultraThinMaterial)
-            shape.fill(Color.white.opacity(0.15))
+            shape.fill(Color.white.opacity(0.45))
         }
     }
 }

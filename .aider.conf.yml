@@ -1,9 +1,14 @@
-model: o4-mini
-weak-model: gpt-4o-mini
+# model: o4-mini
+model: gpt-5
+weak-model: gpt-4.1-mini
+editor-model: gpt-4.1-mini
 
 subtree-only: true
-auto-commits: false
+auto-commits: true
 #lint: true
+
+chat-language: en
+commit-language: en
 
 user-input-color: "#00cc00"
 tool-error-color: "#FF2222"
