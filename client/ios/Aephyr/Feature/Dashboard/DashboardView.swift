@@ -5,9 +5,10 @@ import AephyrShared
 struct DashboardView: View {
     @StateObject private var vm: DashboardVM
 
-    init(repo: DashboardRepository? = nil) {
-        let repository = repo ?? MockDashboardRepository()
-        let facade = DashboardFacade(repo: repository) // Kotlin secondary ctor that injects MainScope
+    init() {
+        let factory = K_FoodStoreFactory()
+        let foodSvc = factory.mock()   // KMM seeded service
+        let facade  = DashboardFacade(food: foodSvc)
         _vm = StateObject(wrappedValue: DashboardVM(facade: facade))
     }
 
@@ -28,30 +29,60 @@ struct DashboardView: View {
         .refreshable { @MainActor in await vm.reload() }
     }
 
+    // MARK: - UI
     @ViewBuilder private var content: some View {
-        List {
-            // HERO — temporarily show empty until we map KMM -> DashboardHero
-            Section {
-                if vm.isLoading {
-                    DashboardHeroSkeleton()
+        ScrollView {
+            VStack(spacing: 16) {
+                // HERO card (builds DashboardHero from entries)
+                if let hero = makeDashboardHero(from: vm.entries) {
+                    Card {
+                        DashboardHeroCard(data: hero)
+                    }
                 } else {
-                    DashboardHeroEmpty()
+                    Card { DashboardHeroSkeleton() }
                 }
-            }
-            .listRowSeparator(.hidden)
 
-            // ENTRIES — simple KMM adapter row (no detail nav yet)
-            Section {
-                ForEach(vm.entries, id: \.id) { item in
-                    FoodRowKMMAdapter(item: item)
+                // ENTRIES card
+                Card {
+                    if vm.entries.isEmpty && !vm.isLoading {
+                        Text("No foods logged yet.")
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 24)
+                    } else {
+                        VStack(spacing: 12) {
+                            ForEach(vm.entries, id: \.id) { item in
+                                FoodRowKMMAdapter(item: item)
+                                Divider().opacity(0.08)
+                            }
+                        }
+                    }
                 }
             }
+            .padding(.vertical, 12)
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(Color.clear)
     }
 
+    private struct Card<Content: View>: View {
+        @ViewBuilder var content: () -> Content
+        var body: some View {
+            VStack(alignment: .leading, spacing: 12) {
+                content()
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(CardBackground())
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .strokeBorder(.white.opacity(0.08))
+            )
+            .padding(.horizontal, 16)
+        }
+    }
+
+
+    // MARK: - Helpers
     private var todayTitle: String {
         let df = DateFormatter()
         df.locale = .current
@@ -60,12 +91,27 @@ struct DashboardView: View {
         df.timeStyle = .none
         return df.string(from: Date())
     }
+
+    /// Build the donut’s data from KMM entries (macros are zero until you track them).
+    private func makeDashboardHero(from items: [FoodItem]) -> DashboardHero? {
+        guard !items.isEmpty else { return nil }
+
+        let totalKcal = items.reduce(0) { $0 + Int($1.kcal) }
+        let energy = Measurement<UnitEnergy>(value: Double(totalKcal), unit: .kilocalories)
+
+        // Adjust if your MacrosSummary initializer differs.
+        let zero = Measurement(value: 0, unit: UnitMass.grams)
+        let macros = MacrosSummary(protein: zero, fat: zero, carb: zero)
+
+        return DashboardHero(energy: energy, macros: macros)
+    }
 }
 
-// Lightweight row that renders the KMM FoodItem directly.
-// Replace with your nice FoodRow once mapping is in place.
+// Lightweight row to render a KMM FoodItem directly.
+// Swap back to your app’s FoodRow(LoggedItem) once you add a mapper.
 private struct FoodRowKMMAdapter: View {
     let item: FoodItem
+
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {

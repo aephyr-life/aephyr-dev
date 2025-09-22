@@ -1,11 +1,3 @@
-//
-//  DailyHeroCard.swift
-//  Aephyr
-//
-//  Created by Martin Pallmann on 20.09.25.
-//
-
-
 import SwiftUI
 import AephyrShared
 
@@ -13,24 +5,32 @@ struct DashboardHeroCard: View {
     let data: DashboardHero
     @Environment(\.energyUnit) private var energyUnit
 
+    // Gram values (Double) for convenience
+    private var pG: Double { data.macros.protein.converted(to: .grams).value }
+    private var fG: Double { data.macros.fat.converted(to: .grams).value }
+    private var cG: Double { data.macros.carb.converted(to: .grams).value }
+    private var hasMacros: Bool { (pG + fG + cG) > 0.0001 }
+
     private var donutSegments: [DonutChart.Segment] {
-        let p = data.macros.protein.converted(to: .grams).value
-        let f = data.macros.fat.converted(to: .grams).value
-        let c = data.macros.carb.converted(to: .grams).value
-        return [
-            .init(label: "Protein", value: p, color: Color("MacroProtein")),
-            .init(label: "Fat",     value: f, color: Color("MacroFat")),
-            .init(label: "Carbs",   value: c, color: Color("MacroCarbs"))
+        [
+            .init(label: "Protein", value: pG, color: Color("MacroProtein")),
+            .init(label: "Fat",     value: fG, color: Color("MacroFat")),
+            .init(label: "Carbs",   value: cG, color: Color("MacroCarbs"))
         ]
     }
 
     var body: some View {
-        
         HStack(alignment: .center, spacing: 16) {
-            // Donut
-            DonutChart(segments: donutSegments, thickness: 20)
-                .frame(width: 120, height: 120)
-                .background(Color.clear)
+            // Donut: segmented when macros > 0, otherwise neutral ring
+            Group {
+                if hasMacros {
+                    DonutChart(segments: donutSegments, thickness: 20)
+                } else {
+                    EmptyDonut(thickness: 20)
+                }
+            }
+            .frame(width: 120, height: 120)
+            .background(Color.clear)
 
             // Textual summary
             VStack(alignment: .leading, spacing: 14) {
@@ -45,39 +45,44 @@ struct DashboardHeroCard: View {
                         .foregroundStyle(.secondary)
                 }
 
-                // Three columns: protein / fat / carbs
+                // Protein / Fat / Carbs
                 HStack(alignment: .top) {
-                    StatColumn(
-                        title: "Protein",
-                        value: Int32(data.macros.protein.converted(to: .grams).value.rounded()),
-                        unit: "g",
-                        color: Color("MacroProtein")
-                    )
+                    StatColumn(title: "Protein",
+                               value: Int32(pG.rounded()),
+                               unit: "g",
+                               color: Color("MacroProtein"))
                     Spacer(minLength: 12)
-                    StatColumn(
-                        title: "Fat",
-                        value: Int32(data.macros.fat.converted(to: .grams).value.rounded()),
-                        unit: "g",
-                        color: Color("MacroFat")
-                    )
+                    StatColumn(title: "Fat",
+                               value: Int32(fG.rounded()),
+                               unit: "g",
+                               color: Color("MacroFat"))
                     Spacer(minLength: 12)
-                    StatColumn(
-                        title: "Carbs",
-                        value: Int32(data.macros.carb.converted(to: .grams).value.rounded()),
-                        unit: "g",
-                        color: Color("MacroCarbs")
-                    )
+                    StatColumn(title: "Carbs",
+                               value: Int32(cG.rounded()),
+                               unit: "g",
+                               color: Color("MacroCarbs"))
                 }
             }
         }
         .padding(16)
         //.background(CardBackground())
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .strokeBorder(.white.opacity(0.08))
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Daily summary")
-       // .accessibilityValue("\(data.kcal) kilocalories. Protein \(Int(data.proteinG)) grams, fat (Int(data.fatG)) grams, carbs \(Int(data.carbsG)) grams.")
     }
 }
+
+// Neutral, always-visible donut ring (no progress/segments)
+private struct EmptyDonut: View {
+    var thickness: CGFloat = 20
+    var body: some View {
+        Circle()
+            .stroke(lineWidth: thickness)
+            .opacity(0.12)
+    }
+}
+
