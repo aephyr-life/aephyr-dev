@@ -59,16 +59,21 @@ jobs:
           ./bin/with-env shared -- just shared test
 
   kmm-macos-xcframework:
-    name: XCFramework (macOS)
     runs-on: macos-latest
     needs: kmm-linux
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@v27
+      # Use Determinate’s installer on macOS
+      - name: Install Nix (macOS)
+        uses: DeterminateSystems/nix-installer-action@v14
         with:
-          nix_path: nixpkgs=channel:nixos-24.05
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      # (Optional) great cache for nix
+      - name: Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v7
 
       - name: Validate Gradle Wrapper
         uses: gradle/wrapper-validation-action@v2
@@ -81,22 +86,21 @@ jobs:
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
-          path: |
-            .gradle
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/*.kts', '**/gradle-wrapper.properties', '**/gradle/libs.versions.toml') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
+          path: ${{ github.workspace }}/.gradle
+          key: gradle-v2-${{ runner.os }}-${{ hashFiles('**/*.gradle*','**/*.kts','**/gradle-wrapper.properties','**/gradle/libs.versions.toml') }}
+          restore-keys: gradle-v2-${{ runner.os }}-
 
       - name: Cache Konan (Kotlin/Native)
         uses: actions/cache@v4
         with:
-          path: .konan
-          key: konan-${{ runner.os }}-${{ hashFiles('**/*.kt', '**/*.kts', '**/build.gradle*', '**/gradle/libs.versions.toml') }}
-          restore-keys: |
-            konan-${{ runner.os }}-
+          path: ${{ github.workspace }}/.konan
+          key: konan-v2-${{ runner.os }}-${{ hashFiles('**/*.kt','**/*.kts','**/build.gradle*','**/gradle/libs.versions.toml') }}
+          restore-keys: konan-v2-${{ runner.os }}-
 
       - name: Build XCFramework (Debug) via with-env → nix develop #shared
+        env:
+          GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
+          KONAN_DATA_DIR:   ${{ github.workspace }}/.konan
         run: |
           ./bin/with-env shared -- just shared xc debug
 
