@@ -61,21 +61,21 @@
             '';
           };
 
-          # NEW: Shared (KMM) CI shell — used by GitHub Actions via bin/with-env
           shared = pkgs.mkShell {
             packages = commonTools ++ [
               pkgs.jdk17
               # Gradle wrapper is preferred; no need to add pkgs.gradle
             ];
 
-            # Keep caches in-repo so Actions can cache them easily
-            GRADLE_USER_HOME = "$PWD/.gradle";
-            KONAN_DATA_DIR   = "$PWD/.konan";
+            shellHook = ''
+              echo "[aephyr] shared KMM shell (CI) — JDK 17"
+              export GRADLE_USER_HOME="$(pwd)/.gradle"
+              export KONAN_DATA_DIR="$(pwd)/.konan"
+              export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8"
 
-            # Reasonable Gradle defaults for CI
-            GRADLE_OPTS = "-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8";
-
-            shellHook = ''echo "[aephyr] shared KMM shell (CI) — JDK 17"'';
+              echo "GRADLE_USER_HOME=$GRADLE_USER_HOME"
+              echo "KONAN_DATA_DIR=$KONAN_DATA_DIR"
+            '';
           };
         };
       });

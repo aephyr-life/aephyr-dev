@@ -42,9 +42,9 @@ jobs:
           path: |
             .gradle
             ~/.gradle/wrapper
-          key: gradle-v2-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/*.kts', '**/gradle-wrapper.properties', '**/gradle/libs.versions.toml') }}
+          key: gradle-v3-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/*.kts', '**/gradle-wrapper.properties', '**/gradle/libs.versions.toml') }}
           restore-keys: |
-            gradle-v2-${{ runner.os }}-
+            gradle-v3-${{ runner.os }}-
 
       - name: Cache Konan (Kotlin/Native)
         uses: actions/cache@v4
