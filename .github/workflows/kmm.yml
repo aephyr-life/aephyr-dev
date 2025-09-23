@@ -97,13 +97,19 @@ jobs:
           key: konan-v2-${{ runner.os }}-${{ hashFiles('**/*.kt','**/*.kts','**/build.gradle*','**/gradle/libs.versions.toml') }}
           restore-keys: konan-v2-${{ runner.os }}-
 
-      - name: Build XCFramework (Debug) via with-env → nix develop #shared
+      - name: Build XCFramework (Debug) via with-env
         env:
           GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
           KONAN_DATA_DIR:   ${{ github.workspace }}/.konan
         run: |
+          set -euxo pipefail
           ./bin/with-env shared -- just shared xc debug
-
+          echo "== After build =="
+          ls -lah client/shared/build/XCFrameworks || true
+          ls -lah client/shared/build/XCFrameworks/Debug || true
+          ls -lah client/ios/Vendor || true
+          test -e client/ios/Vendor/AephyrShared.xcframework
+          
       - name: Upload XCFramework artifact
         uses: actions/upload-artifact@v4
         with:
