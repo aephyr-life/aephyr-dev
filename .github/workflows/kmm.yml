@@ -15,8 +15,8 @@ permissions:
 
 env:
   # Keep caches in-repo so cache action can pick them up
-  GRADLE_USER_HOME: .gradle
-  KONAN_DATA_DIR: .konan
+  GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
+  KONAN_DATA_DIR: ${{ github.workspace }}/.konan
   # Let Gradle fetch toolchains itself
   ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: "true"
   ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-detect: "false"
@@ -42,9 +42,9 @@ jobs:
           path: |
             .gradle
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/*.kts', '**/gradle-wrapper.properties', '**/gradle/libs.versions.toml') }}
+          key: gradle-v2-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/*.kts', '**/gradle-wrapper.properties', '**/gradle/libs.versions.toml') }}
           restore-keys: |
-            gradle-${{ runner.os }}-
+            gradle-v2-${{ runner.os }}-
 
       - name: Cache Konan (Kotlin/Native)
         uses: actions/cache@v4
