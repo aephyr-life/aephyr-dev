@@ -18,6 +18,7 @@ project/project/
 .gradle/
 build/
 out/
+.konan/
 
 # Xcode / iOS
 *.xcworkspace/        # ignore whole workspace directories
