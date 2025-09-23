@@ -12,10 +12,42 @@ test:
 [group('kmm')]
 xc mode="debug":
   #!/usr/bin/env bash
-  MODE={{mode}}
-  "{{GRADLEW}}" -p "{{THIS}}" assembleAephyrShared${MODE^}XCFramework --build-cache --configuration-cache
-  mkdir -p "{{IOS_VENDOR}}"
-  ln -sfn \
-    "../../client/shared/build/XCFrameworks/${MODE^}/AephyrShared.xcframework" \
-    "{{IOS_VENDOR}}/AephyrShared.xcframework"
-  echo "Linked ${MODE^} XCFramework → {{IOS_VENDOR}}/AephyrShared.xcframework"
+  set -euo pipefail
+
+  MODE={{mode}}            # "debug" or "release"
+  CAP="${MODE^}"           # "Debug" or "Release"
+
+  ROOT="$(cd "{{THIS}}"/.. && pwd)"          # .../client
+  SHARED="{{THIS}}"                          # .../client/shared
+  IOS_VENDOR="$ROOT/ios/Vendor"              # .../client/ios/Vendor
+
+  echo "[xc] Building AephyrShared ${CAP} XCFramework…"
+  "{{GRADLEW}}" -p "{{THIS}}" "assembleAephyrShared${CAP}XCFramework" --build-cache --configuration-cache
+
+  echo "[xc] Probing expected output path…"
+  CANDIDATE="$SHARED/build/XCFrameworks/${CAP}/AephyrShared.xcframework"
+
+  if [[ -d "$CANDIDATE" ]]; then
+    SRC="$CANDIDATE"
+  else
+    echo "[xc] Not at canonical location; searching under build/…"
+    SRC="$(cd "$SHARED/build" && { \
+      ls -d */XCFrameworks/*/AephyrShared.xcframework 2>/dev/null || \
+      find . -maxdepth 5 -type d -name 'AephyrShared.xcframework' -print; \
+    } | head -n1)"
+    [[ -n "${SRC:-}" ]] || { echo "ERROR: Could not find AephyrShared.xcframework under $SHARED/build"; exit 1; }
+    SRC="$SHARED/build/${SRC#./}"
+  fi
+
+  echo "[xc] Found: $SRC"
+
+  echo "[xc] Refreshing vendor link…"
+  mkdir -p "$IOS_VENDOR"
+  rm -rf "$IOS_VENDOR/AephyrShared.xcframework" "$IOS_VENDOR/${MODE}" 2>/dev/null || true
+  ln -sfn "$SRC" "$IOS_VENDOR/AephyrShared.xcframework"
+
+  echo "Linked ${CAP} XCFramework → $IOS_VENDOR/AephyrShared.xcframework"
+
+  echo "[xc] Audit:"
+  ls -lah "$IOS_VENDOR" || true
+  ls -lah "$(dirname "$SRC")" || true
