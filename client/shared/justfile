@@ -1,0 +1,21 @@
+set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+
+THIS            := justfile_directory()
+GRADLEW         := THIS / "gradlew"
+IOS_VENDOR      := THIS / "../ios/Vendor"
+
+# Build & test KMM
+[group('kmm')]
+test:
+  {{GRADLEW}} -p "{{THIS}}" clean assemble check
+
+[group('kmm')]
+xc mode="debug":
+  #!/usr/bin/env bash
+  MODE={{mode}}
+  "{{GRADLEW}}" -p "{{THIS}}" assembleAephyrShared${MODE^}XCFramework --build-cache --configuration-cache
+  mkdir -p "{{IOS_VENDOR}}"
+  ln -sfn \
+    "../../client/shared/build/XCFrameworks/${MODE^}/AephyrShared.xcframework" \
+    "{{IOS_VENDOR}}/AephyrShared.xcframework"
+  echo "Linked ${MODE^} XCFramework → {{IOS_VENDOR}}/AephyrShared.xcframework"

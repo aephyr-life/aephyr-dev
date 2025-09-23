@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# bin/with-env <shell-name> -- <cmd...>
+# Prefer Nix in CI/when forced, else direnv for that project dir, else run plain.
+# shell-name is the flake devShell name (e.g. "shared", "server").
+
+set -euo pipefail
+
+if [[ $# -lt 2 ]]; then
+  echo "usage: $0 <shell-name> -- <command...>" >&2
+  exit 2
+fi
+
+shell_name="$1"; shift
+
+if [[ "${1:-}" != "--" ]]; then
+  echo "error: expected '--' after shell name" >&2
+  exit 2
+fi
+shift
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+use_nix=0
+if command -v nix >/dev/null 2>&1; then
+  # Prefer nix in CI, or when user forces it.
+  if [[ "${CI:-}" == "true" || "${USE_NIX:-}" == "1" ]]; then
+    use_nix=1
+  fi
+fi
+
+if [[ $use_nix -eq 1 ]]; then
+  # Run inside flake devShell
+  exec nix develop "${repo_root}#${shell_name}" -c "$@"
+fi
+
+# No nix; try direnv by inferring a working directory from shell_name
+# Map known shells to their dirs (tweak as you add shells)
+case "$shell_name" in
+  shared) mod_dir="$repo_root/client/shared" ;;
+  server) mod_dir="$repo_root/server" ;;
+  ios)    mod_dir="$repo_root/client/ios" ;;
+  *)      mod_dir="$repo_root" ;;
+esac
+
+if command -v direnv >/dev/null 2>&1; then
+  # Quiet direnv logs unless debugging
+  export DIRENV_LOG_FORMAT="${DIRENV_LOG_FORMAT-}"
+  exec direnv exec "$mod_dir" "$@"
+fi
+
+# Last resort: run plain (no env management)
+exec "$@"

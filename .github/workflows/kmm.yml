@@ -1,0 +1,107 @@
+name: KMM CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ "**" ]
+
+concurrency:
+  group: kmm-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Keep caches in-repo so cache action can pick them up
+  GRADLE_USER_HOME: .gradle
+  KONAN_DATA_DIR: .konan
+  # Let Gradle fetch toolchains itself
+  ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: "true"
+  ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-detect: "false"
+
+jobs:
+  kmm-linux:
+    name: Check (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-24.05
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v2
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            .gradle
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/*.kts', '**/gradle-wrapper.properties', '**/gradle/libs.versions.toml') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Cache Konan (Kotlin/Native)
+        uses: actions/cache@v4
+        with:
+          path: .konan
+          key: konan-${{ runner.os }}-${{ hashFiles('**/*.kt', '**/*.kts', '**/build.gradle*', '**/gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-
+
+      - name: Run shared tests/checks (via with-env → nix develop #shared)
+        run: |
+          ./bin/with-env shared -- just shared test
+
+  kmm-macos-xcframework:
+    name: XCFramework (macOS)
+    runs-on: macos-latest
+    needs: kmm-linux
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-24.05
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v2
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            .gradle
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/*.kts', '**/gradle-wrapper.properties', '**/gradle/libs.versions.toml') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Cache Konan (Kotlin/Native)
+        uses: actions/cache@v4
+        with:
+          path: .konan
+          key: konan-${{ runner.os }}-${{ hashFiles('**/*.kt', '**/*.kts', '**/build.gradle*', '**/gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-
+
+      - name: Build XCFramework (Debug) via with-env → nix develop #shared
+        run: |
+          ./bin/with-env shared -- just shared xc debug
+
+      - name: Upload XCFramework artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AephyrShared.xcframework
+          path: client/ios/Vendor/AephyrShared.xcframework

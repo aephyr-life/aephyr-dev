@@ -7,6 +7,9 @@ plugins {
 }
 
 kotlin {
+
+    jvmToolchain(17)
+
     applyDefaultHierarchyTemplate()
 
     sourceSets.all {
