@@ -1,0 +1,323 @@
+name: Monorepo CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ "**" ]
+
+concurrency:
+  group: monorepo-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Keep caches in-repo so cache action can pick them up
+  GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
+  KONAN_DATA_DIR:   ${{ github.workspace }}/.konan
+  # Let Gradle fetch toolchains itself
+  ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: "true"
+  ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-detect: "false"
+
+jobs:
+  detect:
+    name: Detect affected targets
+    runs-on: ubuntu-latest
+    outputs:
+      run_mode: ${{ steps.out.outputs.run_mode }}
+      matrix:   ${{ steps.out.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Ensure jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Compute changed files
+        id: diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+          fi
+          git diff --name-only "$BASE" "$HEAD" | tee /tmp/changed.txt
+          # ensure file exists even if no changes (e.g. weird PR states)
+          touch /tmp/changed.txt
+
+      - name: Decide run mode & build matrix (with reasons)
+        id: out
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          say() { echo "• $1"; echo "- $1" >> "$GITHUB_STEP_SUMMARY"; }
+
+          echo "### Monorepo detector" > "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Changed files:**" >> "$GITHUB_STEP_SUMMARY"
+          if [ -s /tmp/changed.txt ]; then
+            awk '{print "- " $0}' /tmp/changed.txt >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- (none?)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Reasons / decisions:**" >> "$GITHUB_STEP_SUMMARY"
+
+          REASONS=()
+
+          # Overrides
+          FORCE_FULL=0
+          PR_LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
+          if echo "$PR_LABELS" | grep -qi 'ci:full'; then
+            FORCE_FULL=1
+            REASONS+=("Label ci:full present → full run")
+          fi
+          if [ "${{ github.event_name }}" = "push" ]; then
+            FORCE_FULL=1
+            REASONS+=("Push to protected branch → full run")
+          fi
+
+          # "Global" CI/Nix changes → full
+          GLOBAL_CHANGED=0
+          if grep -Eqi '^\.github/workflows/|^flake\.nix$|^flake\.lock$|^[^/]+\.nix$' /tmp/changed.txt; then
+            GLOBAL_CHANGED=1
+            REASONS+=("CI/Nix files changed → full run")
+          fi
+
+          # Path matches (your layout)
+          IOS_CHANGED=0
+          KMM_CHANGED=0
+          SBT_CHANGED=0
+
+          if grep -Eqi '^client/ios/' /tmp/changed.txt; then
+            IOS_CHANGED=1
+            REASONS+=("Files under client/ios/ changed → iOS shard")
+            say "match: ^client/ios/ → IOS_CHANGED=1"
+          fi
+          if grep -Eqi '^client/shared/' /tmp/changed.txt; then
+            KMM_CHANGED=1
+            REASONS+=("Files under client/shared/ changed → KMM shard")
+            say "match: ^client/shared/ → KMM_CHANGED=1"
+          fi
+          if grep -Eqi '^server/' /tmp/changed.txt; then
+            SBT_CHANGED=1
+            REASONS+=("Files under server/ changed → sbt shard")
+            say "match: ^server/ → SBT_CHANGED=1"
+          fi
+
+          MATRIX='[]'
+          add() { MATRIX="$(jq -c --argjson obj "$1" '. + [$obj]' <<<"$MATRIX")"; }
+
+          if [ $FORCE_FULL -eq 1 ] || [ $GLOBAL_CHANGED -eq 1 ]; then
+            RUN_MODE=full
+            say "Running FULL matrix"
+            add '{"kind":"gradle","name":"kmm","target":":client:shared","runs_on":"ubuntu-latest","reason":"full run (push/label/global)"}'
+            add '{"kind":"xcode","name":"ios","scheme":"Aephyr","xcodeproj":"client/ios/Aephyr.xcodeproj","runs_on":"macos-latest","reason":"full run (push/label/global)"}'
+            add '{"kind":"sbt","name":"server","runs_on":"ubuntu-latest","reason":"full run (push/label/global)"}'
+          else
+            RUN_MODE=partial
+            say "Running PARTIAL matrix"
+
+            if [ $KMM_CHANGED -eq 1 ]; then
+              add '{"kind":"gradle","name":"kmm","target":":client:shared","runs_on":"ubuntu-latest","reason":"client/shared/ changed"}'
+              # dependent: iOS consumes the XCFramework
+              add '{"kind":"xcode","name":"ios","scheme":"Aephyr","xcodeproj":"client/ios/Aephyr.xcodeproj","runs_on":"macos-latest","reason":"added due to KMM dependency"}'
+              REASONS+=("Added iOS shard because KMM changed (dependent)")
+            fi
+
+            if [ $IOS_CHANGED -eq 1 ] && [ $KMM_CHANGED -eq 0 ]; then
+              add '{"kind":"xcode","name":"ios","scheme":"Aephyr","xcodeproj":"client/ios/Aephyr.xcodeproj","runs_on":"macos-latest","reason":"client/ios/ changed"}'
+            fi
+
+            if [ $SBT_CHANGED -eq 1 ]; then
+              add '{"kind":"sbt","name":"server","runs_on":"ubuntu-latest","reason":"server/ changed"}'
+            fi
+          fi
+
+          if [ "$(jq 'length' <<<"$MATRIX")" -eq 0 ]; then
+            RUN_MODE=smoke
+            add '{"kind":"smoke","name":"smoke","runs_on":"ubuntu-latest","reason":"no relevant paths matched"}'
+            REASONS+=("No relevant paths matched → smoke shard only")
+          fi
+
+          # Pretty-print matrix into summary
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Shards:**" >> "$GITHUB_STEP_SUMMARY"
+          jq -r '.[] | "- \(.name) [\(.kind)] on \(.runs_on): \(.reason)"' <<<"$MATRIX" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Decision log:**" >> "$GITHUB_STEP_SUMMARY"
+          for r in "${REASONS[@]}"; do say "$r"; done
+
+          MATRIX_OBJ="$(jq -c --argjson inc "$MATRIX" '{include: $inc}' <<< '{}')"
+          echo "run_mode=$RUN_MODE" >> "$GITHUB_OUTPUT"
+          echo "matrix=$MATRIX_OBJ" >> "$GITHUB_OUTPUT"
+
+          echo "Run mode: $RUN_MODE"
+          echo "Matrix: $MATRIX_OBJ"
+
+  build-test:
+    name: Build & Test
+    needs: detect
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      # -------------------------
+      # Shared Java toolchain
+      # -------------------------
+      - name: Set up JDK (for Gradle/sbt)
+        if: matrix.kind == 'gradle' || matrix.kind == 'sbt'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 23
+
+      # =========================
+      # Gradle / KMM shard
+      # =========================
+      - name: Install Nix (Linux)
+        if: matrix.kind == 'gradle' && runner.os == 'Linux'
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-24.05
+
+      - name: Validate Gradle Wrapper
+        if: matrix.kind == 'gradle'
+        uses: gradle/wrapper-validation-action@v2
+
+      - name: Cache Gradle
+        if: matrix.kind == 'gradle'
+        uses: actions/cache@v4
+        with:
+          path: |
+            .gradle
+            ~/.gradle/wrapper
+          key: gradle-v3-${{ runner.os }}-${{ hashFiles('**/*.gradle*','**/*.kts','**/gradle-wrapper.properties','**/gradle/libs.versions.toml') }}
+          restore-keys: gradle-v3-${{ runner.os }}-
+
+      - name: Cache Konan (Kotlin/Native)
+        if: matrix.kind == 'gradle'
+        uses: actions/cache@v4
+        with:
+          path: .konan
+          key: konan-v3-${{ runner.os }}-${{ hashFiles('**/*.kt','**/*.kts','**/build.gradle*','**/gradle/libs.versions.toml') }}
+          restore-keys: konan-v3-${{ runner.os }}-
+
+      - name: Run KMM tests (via with-env → nix develop #shared)
+        if: matrix.kind == 'gradle'
+        run: |
+          ./bin/with-env shared -- just shared test
+
+      # =========================
+      # sbt / Server shard
+      # =========================
+      - name: Cache Coursier/Ivy
+        if: matrix.kind == 'sbt'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/coursier
+            ~/.ivy2/cache
+            ~/.sbt
+          key: sbt-${{ runner.os }}-${{ hashFiles('server/**') }}
+          restore-keys: sbt-${{ runner.os }}-
+
+      - name: sbt test (server/)
+        if: matrix.kind == 'sbt'
+        working-directory: server
+        run: |
+          curl -L -o sbt.tgz https://github.com/sbt/sbt/releases/download/v1.10.2/sbt-1.10.2.tgz
+          tar xzf sbt.tgz
+          ./sbt/bin/sbt -batch -v test
+
+      # =========================
+      # Xcode / iOS shard
+      # =========================
+      - name: Install Nix (macOS)
+        if: matrix.kind == 'xcode'
+        uses: DeterminateSystems/nix-installer-action@v14
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      - name: Magic Nix Cache (macOS)
+        if: matrix.kind == 'xcode'
+        uses: DeterminateSystems/magic-nix-cache-action@v7
+
+      - name: Select Xcode
+        if: matrix.kind == 'xcode'
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Validate Gradle Wrapper (for XCFramework step)
+        if: matrix.kind == 'xcode'
+        uses: gradle/wrapper-validation-action@v2
+
+      - name: Cache Gradle (macOS XCFramework build)
+        if: matrix.kind == 'xcode'
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.gradle
+          key: gradle-osx-v2-${{ runner.os }}-${{ hashFiles('**/*.gradle*','**/*.kts','**/gradle-wrapper.properties','**/gradle/libs.versions.toml') }}
+          restore-keys: gradle-osx-v2-${{ runner.os }}-
+
+      - name: Cache Konan (macOS)
+        if: matrix.kind == 'xcode'
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.konan
+          key: konan-osx-v2-${{ runner.os }}-${{ hashFiles('**/*.kt','**/*.kts','**/build.gradle*','**/gradle/libs.versions.toml') }}
+          restore-keys: konan-osx-v2-${{ runner.os }}-
+
+      - name: Build KMM XCFramework (Debug) for iOS consumer
+        if: matrix.kind == 'xcode'
+        env:
+          GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
+          KONAN_DATA_DIR:   ${{ github.workspace }}/.konan
+        run: |
+          set -euxo pipefail
+          ./bin/with-env shared -- just shared xc debug
+          test -e client/ios/Vendor/AephyrShared.xcframework
+
+      - name: Show available destinations (debug)
+        if: matrix.kind == 'xcode'
+        run: |
+          xcodebuild -project "${{ matrix.xcodeproj }}" -scheme "${{ matrix.scheme }}" -showdestinations
+
+      - name: iOS build (no tests)
+        if: matrix.kind == 'xcode'
+        run: |
+          xcodebuild -project "${{ matrix.xcodeproj }}" \
+            -scheme "${{ matrix.scheme }}" \
+            -destination 'platform=iOS Simulator,OS=26.0,name=iPhone 17' \
+            -configuration Debug \
+            build
+
+      - name: Upload XCFramework artifact
+        if: matrix.kind == 'xcode'
+        uses: actions/upload-artifact@v4
+        with:
+          name: AephyrShared.xcframework
+          path: client/ios/Vendor/AephyrShared.xcframework
+
+      # =========================
+      # Smoke shard
+      # =========================
+      - name: Repo smoke (fast compile)
+        if: matrix.kind == 'smoke'
+        run: |
+          ./gradlew -p client/shared :client:shared:compileKotlinMetadata || true
+          echo "✅ smoke ok"

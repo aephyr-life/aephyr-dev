@@ -66,11 +66,11 @@ aider project *args:
 
   case "{{project}}" in
     root)
-      exec aider --watch-files {{args}}
+      exec aider --watch-files --notifications {{args}}
       ;;
     server|ios|shared) 
       TEST_CMD="bash -lc 'cd {{root}} && just {{project}} test'"
-      exec aider --test-cmd "$TEST_CMD" --auto-test --watch-files {{args}}
+      exec aider --test-cmd "$TEST_CMD" --auto-test --watch-files --notifications {{args}}
       ;;
     *) 
       echo "Usage: just aider (server|ios|shared) [AIDER_ARGS…]" >&2; exit 2
