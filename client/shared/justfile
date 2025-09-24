@@ -4,6 +4,10 @@ THIS            := justfile_directory()
 GRADLEW         := THIS / "gradlew"
 IOS_VENDOR      := THIS / "../ios/Vendor"
 
+[private]
+default:
+  @just --list
+
 # Build & test KMM
 [group('kmm')]
 test:
