@@ -1,14 +1,14 @@
+# keep your header as-is
 set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 
-THIS            := justfile_directory()
-GRADLEW         := THIS / "gradlew"
-IOS_VENDOR      := THIS / "../ios/Vendor"
+THIS       := justfile_directory()
+GRADLEW    := THIS / "gradlew"
+IOS_VENDOR := THIS / "../ios/Vendor"
 
 [private]
 default:
   @just --list
 
-# Build & test KMM
 [group('kmm')]
 test:
   {{GRADLEW}} -p "{{THIS}}" clean assemble check
@@ -18,12 +18,18 @@ xc mode="debug":
   #!/usr/bin/env bash
   set -euo pipefail
 
-  MODE={{mode}}            # "debug" or "release"
-  CAP="${MODE^}"           # "Debug" or "Release"
+  MODE="{{mode}}"
 
-  ROOT="$(cd "{{THIS}}"/.. && pwd)"          # .../client
-  SHARED="{{THIS}}"                          # .../client/shared
-  IOS_VENDOR="$ROOT/ios/Vendor"              # .../client/ios/Vendor
+  # Capitalize mode (portable for macOS bash 3.x)
+  case "$MODE" in
+  debug)   CAP=Debug ;;
+  release) CAP=Release ;;
+  *) echo "Unknown mode: $MODE"; exit 1 ;;
+  esac
+
+  ROOT="$(cd "{{THIS}}"/.. && pwd)"      # .../client
+  SHARED="{{THIS}}"                      # .../client/shared
+  IOS_VENDOR="$ROOT/ios/Vendor"          # .../client/ios/Vendor
 
   echo "[xc] Building AephyrShared ${CAP} XCFramework…"
   "{{GRADLEW}}" -p "{{THIS}}" "assembleAephyrShared${CAP}XCFramework" --build-cache --configuration-cache
@@ -35,23 +41,24 @@ xc mode="debug":
     SRC="$CANDIDATE"
   else
     echo "[xc] Not at canonical location; searching under build/…"
-    SRC="$(cd "$SHARED/build" && { \
+    SRC_REL="$(cd "$SHARED/build" && { \
       ls -d */XCFrameworks/*/AephyrShared.xcframework 2>/dev/null || \
       find . -maxdepth 5 -type d -name 'AephyrShared.xcframework' -print; \
-    } | head -n1)"
-    [[ -n "${SRC:-}" ]] || { echo "ERROR: Could not find AephyrShared.xcframework under $SHARED/build"; exit 1; }
-    SRC="$SHARED/build/${SRC#./}"
+    } | head -n1 || true)"
+    [[ -n "${SRC_REL:-}" ]] || { echo "ERROR: Could not find AephyrShared.xcframework under $SHARED/build"; exit 1; }
+    SRC="$SHARED/build/${SRC_REL#./}"
   fi
 
   echo "[xc] Found: $SRC"
 
-  echo "[xc] Refreshing vendor link…"
+  echo "[xc] Refreshing vendor copy…"
   mkdir -p "$IOS_VENDOR"
-  rm -rf "$IOS_VENDOR/AephyrShared.xcframework" "$IOS_VENDOR/${MODE}" 2>/dev/null || true
-  ln -sfn "$SRC" "$IOS_VENDOR/AephyrShared.xcframework"
+  DST="$IOS_VENDOR/AephyrShared.xcframework"
+  rm -rf "$DST"
+  cp -R "$SRC" "$DST"
 
-  echo "Linked ${CAP} XCFramework → $IOS_VENDOR/AephyrShared.xcframework"
+  [[ -d "$DST" ]] || { echo "ERROR: Destination copy missing: $DST"; exit 1; }
 
-  echo "[xc] Audit:"
+  echo "✅ Copied ${CAP} XCFramework → $DST"
   ls -lah "$IOS_VENDOR" || true
   ls -lah "$(dirname "$SRC")" || true

@@ -1,0 +1,5 @@
+framework module "AephyrShared" {
+    umbrella header "AephyrShared.h"
+    export *
+    module * { export * }
+}

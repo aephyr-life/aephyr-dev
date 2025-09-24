@@ -141,27 +141,3 @@ private struct FoodRowKMMAdapter: View {
     }
 }
 
-// Lightweight row to render a KMM FoodItem directly.
-// Swap back to your app’s FoodRow(LoggedItem) once you add a mapper.
-private struct FoodRowKMMAdapter: View {
-    let item: FoodItem
-
-    var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.name)
-                Text("\(item.grams) g")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 8)
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("\(item.kcal) kcal")
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .contentShape(Rectangle())
-    }
-}
-
