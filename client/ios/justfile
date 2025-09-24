@@ -4,4 +4,4 @@ default:
 
 # Test
 test:
-  xcodebuild test -scheme Aephyr -destination 'platform=iOS Simulator, name=iPhone 17' || exit 0
+  xcodebuild test -scheme Aephyr -destination 'platform=iOS Simulator,name=iPhone 17'
