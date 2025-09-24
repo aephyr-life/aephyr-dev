@@ -23,7 +23,7 @@ env:
 
 jobs:
   detect:
-    name: Detect affected targets → emit matrix
+    name: Detect affected targets
     runs-on: ubuntu-latest
     outputs:
       run_mode: ${{ steps.out.outputs.run_mode }}
@@ -300,7 +300,6 @@ jobs:
       - name: iOS build (no tests)
         if: matrix.kind == 'xcode'
         run: |
-          # Let Xcode pick any latest iOS Simulator that exists on the runner
           xcodebuild -project "${{ matrix.xcodeproj }}" \
             -scheme "${{ matrix.scheme }}" \
             -destination 'platform=iOS Simulator,OS=latest' \
