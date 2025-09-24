@@ -26,11 +26,9 @@ kotlin {
     targets.withType<KotlinNativeTarget> {
         binaries.framework {
             baseName = "AephyrShared"
+            binaryOption("bundleId", "life.aephyr.shared")
             isStatic = true
             xcframework.add(this)
-
-            // 2) (Optional but handy) remove the main-thread guard at the Swift/KMM suspend boundary
-            //binaryOption("objcExportSuspendFunctionLaunchThreadRestriction", "none")
         }
     }
 

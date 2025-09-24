@@ -302,7 +302,7 @@ jobs:
         run: |
           xcodebuild -project "${{ matrix.xcodeproj }}" \
             -scheme "${{ matrix.scheme }}" \
-            -destination 'platform=iOS Simulator,OS=latest' \
+            -destination 'platform=iOS Simulator,OS=26.0,name=iPhone 17' \
             -configuration Debug \
             build
 
