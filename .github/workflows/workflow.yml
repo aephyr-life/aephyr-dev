@@ -1,4 +1,4 @@
-name: Monorepo CI (Detect & Targeted)
+name: Monorepo CI
 
 on:
   push:
@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 env:
-  # Gradle/Konan live inside the repo so cache action can pick them up
+  # Keep caches in-repo so cache action can pick them up
   GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
   KONAN_DATA_DIR:   ${{ github.workspace }}/.konan
   # Let Gradle fetch toolchains itself
@@ -48,61 +48,113 @@ jobs:
             HEAD="${{ github.sha }}"
           fi
           git diff --name-only "$BASE" "$HEAD" | tee /tmp/changed.txt
-          touch /tmp/changed.txt  # ensure file exists
+          # ensure file exists even if no changes (e.g. weird PR states)
+          touch /tmp/changed.txt
 
-      - name: Decide run mode & build matrix
+      - name: Decide run mode & build matrix (with reasons)
         id: out
         shell: bash
         run: |
           set -euo pipefail
 
-          # Overrides / global triggers
+          say() { echo "• $1"; echo "- $1" >> "$GITHUB_STEP_SUMMARY"; }
+
+          echo "### Monorepo detector" > "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Changed files:**" >> "$GITHUB_STEP_SUMMARY"
+          if [ -s /tmp/changed.txt ]; then
+            awk '{print "- " $0}' /tmp/changed.txt >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- (none?)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Reasons / decisions:**" >> "$GITHUB_STEP_SUMMARY"
+
+          REASONS=()
+
+          # Overrides
           FORCE_FULL=0
           PR_LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
-          echo "$PR_LABELS" | grep -qi 'ci:full' && FORCE_FULL=1
-          if [ "${{ github.event_name }}" = "push" ]; then FORCE_FULL=1; fi
+          if echo "$PR_LABELS" | grep -qi 'ci:full'; then
+            FORCE_FULL=1
+            REASONS+=("Label ci:full present → full run")
+          fi
+          if [ "${{ github.event_name }}" = "push" ]; then
+            FORCE_FULL=1
+            REASONS+=("Push to protected branch → full run")
+          fi
 
+          # "Global" CI/Nix changes → full
           GLOBAL_CHANGED=0
-          grep -Eqi '(^|/)(settings\.gradle(\.kts)?|build\.gradle(\.kts)?|buildSrc/|gradle/libs\.versions\.toml|\.github/workflows/|flake\.nix|flake\.lock|\.nix$)' /tmp/changed.txt && GLOBAL_CHANGED=1
+          if grep -Eqi '^\.github/workflows/|^flake\.nix$|^flake\.lock$|^[^/]+\.nix$' /tmp/changed.txt; then
+            GLOBAL_CHANGED=1
+            REASONS+=("CI/Nix files changed → full run")
+          fi
 
-          # Paths → targets
+          # Path matches (your layout)
           IOS_CHANGED=0
           KMM_CHANGED=0
           SBT_CHANGED=0
-          grep -Eqi '^client/ios/'    /tmp/changed.txt && IOS_CHANGED=1
-          grep -Eqi '^client/shared/' /tmp/changed.txt && KMM_CHANGED=1
-          grep -Eqi '^server/'        /tmp/changed.txt && SBT_CHANGED=1
+
+          if grep -Eqi '^client/ios/' /tmp/changed.txt; then
+            IOS_CHANGED=1
+            REASONS+=("Files under client/ios/ changed → iOS shard")
+            say "match: ^client/ios/ → IOS_CHANGED=1"
+          fi
+          if grep -Eqi '^client/shared/' /tmp/changed.txt; then
+            KMM_CHANGED=1
+            REASONS+=("Files under client/shared/ changed → KMM shard")
+            say "match: ^client/shared/ → KMM_CHANGED=1"
+          fi
+          if grep -Eqi '^server/' /tmp/changed.txt; then
+            SBT_CHANGED=1
+            REASONS+=("Files under server/ changed → sbt shard")
+            say "match: ^server/ → SBT_CHANGED=1"
+          fi
 
           MATRIX='[]'
           add() { MATRIX="$(jq -c --argjson obj "$1" '. + [$obj]' <<<"$MATRIX")"; }
 
           if [ $FORCE_FULL -eq 1 ] || [ $GLOBAL_CHANGED -eq 1 ]; then
             RUN_MODE=full
-            add '{"kind":"gradle","target":":client:shared","runs_on":"ubuntu-latest"}'
-            add '{"kind":"xcode","scheme":"Aephyr","xcodeproj":"client/ios/Aephyr.xcodeproj","runs_on":"macos-latest"}'
-            add '{"kind":"sbt","project":"server","runs_on":"ubuntu-latest"}'
+            say "Running FULL matrix"
+            add '{"kind":"gradle","name":"kmm","target":":client:shared","runs_on":"ubuntu-latest","reason":"full run (push/label/global)"}'
+            add '{"kind":"xcode","name":"ios","scheme":"Aephyr","xcodeproj":"client/ios/Aephyr.xcodeproj","runs_on":"macos-latest","reason":"full run (push/label/global)"}'
+            add '{"kind":"sbt","name":"server","runs_on":"ubuntu-latest","reason":"full run (push/label/global)"}'
           else
             RUN_MODE=partial
-            # KMM changes → also build iOS (depends on XCFramework)
+            say "Running PARTIAL matrix"
+
             if [ $KMM_CHANGED -eq 1 ]; then
-              add '{"kind":"gradle","target":":client:shared","runs_on":"ubuntu-latest"}'
-              add '{"kind":"xcode","scheme":"Aephyr","xcodeproj":"client/ios/Aephyr.xcodeproj","runs_on":"macos-latest"}'
+              add '{"kind":"gradle","name":"kmm","target":":client:shared","runs_on":"ubuntu-latest","reason":"client/shared/ changed"}'
+              # dependent: iOS consumes the XCFramework
+              add '{"kind":"xcode","name":"ios","scheme":"Aephyr","xcodeproj":"client/ios/Aephyr.xcodeproj","runs_on":"macos-latest","reason":"added due to KMM dependency"}'
+              REASONS+=("Added iOS shard because KMM changed (dependent)")
             fi
-            # Direct iOS changes
+
             if [ $IOS_CHANGED -eq 1 ] && [ $KMM_CHANGED -eq 0 ]; then
-              add '{"kind":"xcode","scheme":"Aephyr","xcodeproj":"client/ios/Aephyr.xcodeproj","runs_on":"macos-latest"}'
+              add '{"kind":"xcode","name":"ios","scheme":"Aephyr","xcodeproj":"client/ios/Aephyr.xcodeproj","runs_on":"macos-latest","reason":"client/ios/ changed"}'
             fi
-            # Server (sbt) changes
+
             if [ $SBT_CHANGED -eq 1 ]; then
-              add '{"kind":"sbt","project":"server","runs_on":"ubuntu-latest"}'
+              add '{"kind":"sbt","name":"server","runs_on":"ubuntu-latest","reason":"server/ changed"}'
             fi
           fi
 
-          # Nothing matched → tiny smoke shard
           if [ "$(jq 'length' <<<"$MATRIX")" -eq 0 ]; then
             RUN_MODE=smoke
-            add '{"kind":"smoke","runs_on":"ubuntu-latest"}'
+            add '{"kind":"smoke","name":"smoke","runs_on":"ubuntu-latest","reason":"no relevant paths matched"}'
+            REASONS+=("No relevant paths matched → smoke shard only")
           fi
+
+          # Pretty-print matrix into summary
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Shards:**" >> "$GITHUB_STEP_SUMMARY"
+          jq -r '.[] | "- \(.name) [\(.kind)] on \(.runs_on): \(.reason)"' <<<"$MATRIX" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Decision log:**" >> "$GITHUB_STEP_SUMMARY"
+          for r in "${REASONS[@]}"; do say "$r"; done
 
           MATRIX_OBJ="$(jq -c --argjson inc "$MATRIX" '{include: $inc}' <<< '{}')"
           echo "run_mode=$RUN_MODE" >> "$GITHUB_OUTPUT"
@@ -112,7 +164,7 @@ jobs:
           echo "Matrix: $MATRIX_OBJ"
 
   build-test:
-    name: Build & Test (fan-out)
+    name: Build & Test
     needs: detect
     runs-on: ${{ matrix.runs_on }}
     strategy:
@@ -126,7 +178,7 @@ jobs:
       # Shared Java toolchain
       # -------------------------
       - name: Set up JDK (for Gradle/sbt)
-        if: contains('gradle,sbt', matrix.kind)
+        if: matrix.kind == 'gradle' || matrix.kind == 'sbt'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -182,12 +234,13 @@ jobs:
           key: sbt-${{ runner.os }}-${{ hashFiles('server/**') }}
           restore-keys: sbt-${{ runner.os }}-
 
-      - name: sbt test (server)
+      - name: sbt test (server/)
         if: matrix.kind == 'sbt'
+        working-directory: server
         run: |
           curl -L -o sbt.tgz https://github.com/sbt/sbt/releases/download/v1.10.2/sbt-1.10.2.tgz
           tar xzf sbt.tgz
-          ./sbt/bin/sbt "project server" test
+          ./sbt/bin/sbt -batch -v test
 
       # =========================
       # Xcode / iOS shard
@@ -229,15 +282,6 @@ jobs:
           key: konan-osx-v2-${{ runner.os }}-${{ hashFiles('**/*.kt','**/*.kts','**/build.gradle*','**/gradle/libs.versions.toml') }}
           restore-keys: konan-osx-v2-${{ runner.os }}-
 
-      - name: iOS build & test
-        if: matrix.kind == 'xcode'
-        run: |
-          xcodebuild -project "${{ matrix.xcodeproj }}" \
-            -scheme "${{ matrix.scheme }}" \
-            -destination 'platform=iOS Simulator,name=iPhone 15' \
-            -configuration Debug \
-            test
-
       - name: Build KMM XCFramework (Debug) for iOS consumer
         if: matrix.kind == 'xcode'
         env:
@@ -246,11 +290,16 @@ jobs:
         run: |
           set -euxo pipefail
           ./bin/with-env shared -- just shared xc debug
-          echo "== After build =="
-          ls -lah client/shared/build/XCFrameworks || true
-          ls -lah client/shared/build/XCFrameworks/Debug || true
-          ls -lah client/ios/Vendor || true
           test -e client/ios/Vendor/AephyrShared.xcframework
+
+      - name: iOS build & test
+        if: matrix.kind == 'xcode'
+        run: |
+          xcodebuild -project "${{ matrix.xcodeproj }}" \
+            -scheme "${{ matrix.scheme }}" \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            -configuration Debug \
+            test
 
       - name: Upload XCFramework artifact
         if: matrix.kind == 'xcode'
