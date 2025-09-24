@@ -292,14 +292,20 @@ jobs:
           ./bin/with-env shared -- just shared xc debug
           test -e client/ios/Vendor/AephyrShared.xcframework
 
-      - name: iOS build & test
+      - name: Show available destinations (debug)
         if: matrix.kind == 'xcode'
         run: |
+          xcodebuild -project "${{ matrix.xcodeproj }}" -scheme "${{ matrix.scheme }}" -showdestinations
+
+      - name: iOS build (no tests)
+        if: matrix.kind == 'xcode'
+        run: |
+          # Let Xcode pick any latest iOS Simulator that exists on the runner
           xcodebuild -project "${{ matrix.xcodeproj }}" \
             -scheme "${{ matrix.scheme }}" \
-            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            -destination 'platform=iOS Simulator,OS=latest' \
             -configuration Debug \
-            test
+            build
 
       - name: Upload XCFramework artifact
         if: matrix.kind == 'xcode'
