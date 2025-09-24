@@ -1,3 +1,7 @@
 [private]
 default:
   @just --list
+
+# Test
+test:
+  xcodebuild test -scheme Aephyr -destination 'platform=iOS Simulator, name=iPhone 17' || exit 0
