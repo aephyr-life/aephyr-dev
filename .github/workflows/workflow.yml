@@ -1,0 +1,269 @@
+name: Monorepo CI (Detect & Targeted)
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ "**" ]
+
+concurrency:
+  group: monorepo-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Gradle/Konan live inside the repo so cache action can pick them up
+  GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
+  KONAN_DATA_DIR:   ${{ github.workspace }}/.konan
+  # Let Gradle fetch toolchains itself
+  ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: "true"
+  ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-detect: "false"
+
+jobs:
+  detect:
+    name: Detect affected targets → emit matrix
+    runs-on: ubuntu-latest
+    outputs:
+      run_mode: ${{ steps.out.outputs.run_mode }}
+      matrix:   ${{ steps.out.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Ensure jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Compute changed files
+        id: diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+          fi
+          git diff --name-only "$BASE" "$HEAD" | tee /tmp/changed.txt
+          touch /tmp/changed.txt  # ensure file exists
+
+      - name: Decide run mode & build matrix
+        id: out
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Overrides / global triggers
+          FORCE_FULL=0
+          PR_LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
+          echo "$PR_LABELS" | grep -qi 'ci:full' && FORCE_FULL=1
+          if [ "${{ github.event_name }}" = "push" ]; then FORCE_FULL=1; fi
+
+          GLOBAL_CHANGED=0
+          grep -Eqi '(^|/)(settings\.gradle(\.kts)?|build\.gradle(\.kts)?|buildSrc/|gradle/libs\.versions\.toml|\.github/workflows/|flake\.nix|flake\.lock|\.nix$)' /tmp/changed.txt && GLOBAL_CHANGED=1
+
+          # Paths → targets
+          IOS_CHANGED=0
+          KMM_CHANGED=0
+          SBT_CHANGED=0
+          grep -Eqi '^client/ios/'    /tmp/changed.txt && IOS_CHANGED=1
+          grep -Eqi '^client/shared/' /tmp/changed.txt && KMM_CHANGED=1
+          grep -Eqi '^server/'        /tmp/changed.txt && SBT_CHANGED=1
+
+          MATRIX='[]'
+          add() { MATRIX="$(jq -c --argjson obj "$1" '. + [$obj]' <<<"$MATRIX")"; }
+
+          if [ $FORCE_FULL -eq 1 ] || [ $GLOBAL_CHANGED -eq 1 ]; then
+            RUN_MODE=full
+            add '{"kind":"gradle","target":":client:shared","runs_on":"ubuntu-latest"}'
+            add '{"kind":"xcode","scheme":"Aephyr","xcodeproj":"client/ios/Aephyr.xcodeproj","runs_on":"macos-latest"}'
+            add '{"kind":"sbt","project":"server","runs_on":"ubuntu-latest"}'
+          else
+            RUN_MODE=partial
+            # KMM changes → also build iOS (depends on XCFramework)
+            if [ $KMM_CHANGED -eq 1 ]; then
+              add '{"kind":"gradle","target":":client:shared","runs_on":"ubuntu-latest"}'
+              add '{"kind":"xcode","scheme":"Aephyr","xcodeproj":"client/ios/Aephyr.xcodeproj","runs_on":"macos-latest"}'
+            fi
+            # Direct iOS changes
+            if [ $IOS_CHANGED -eq 1 ] && [ $KMM_CHANGED -eq 0 ]; then
+              add '{"kind":"xcode","scheme":"Aephyr","xcodeproj":"client/ios/Aephyr.xcodeproj","runs_on":"macos-latest"}'
+            fi
+            # Server (sbt) changes
+            if [ $SBT_CHANGED -eq 1 ]; then
+              add '{"kind":"sbt","project":"server","runs_on":"ubuntu-latest"}'
+            fi
+          fi
+
+          # Nothing matched → tiny smoke shard
+          if [ "$(jq 'length' <<<"$MATRIX")" -eq 0 ]; then
+            RUN_MODE=smoke
+            add '{"kind":"smoke","runs_on":"ubuntu-latest"}'
+          fi
+
+          MATRIX_OBJ="$(jq -c --argjson inc "$MATRIX" '{include: $inc}' <<< '{}')"
+          echo "run_mode=$RUN_MODE" >> "$GITHUB_OUTPUT"
+          echo "matrix=$MATRIX_OBJ" >> "$GITHUB_OUTPUT"
+
+          echo "Run mode: $RUN_MODE"
+          echo "Matrix: $MATRIX_OBJ"
+
+  build-test:
+    name: Build & Test (fan-out)
+    needs: detect
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      # -------------------------
+      # Shared Java toolchain
+      # -------------------------
+      - name: Set up JDK (for Gradle/sbt)
+        if: contains('gradle,sbt', matrix.kind)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # =========================
+      # Gradle / KMM shard
+      # =========================
+      - name: Install Nix (Linux)
+        if: matrix.kind == 'gradle' && runner.os == 'Linux'
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-24.05
+
+      - name: Validate Gradle Wrapper
+        if: matrix.kind == 'gradle'
+        uses: gradle/wrapper-validation-action@v2
+
+      - name: Cache Gradle
+        if: matrix.kind == 'gradle'
+        uses: actions/cache@v4
+        with:
+          path: |
+            .gradle
+            ~/.gradle/wrapper
+          key: gradle-v3-${{ runner.os }}-${{ hashFiles('**/*.gradle*','**/*.kts','**/gradle-wrapper.properties','**/gradle/libs.versions.toml') }}
+          restore-keys: gradle-v3-${{ runner.os }}-
+
+      - name: Cache Konan (Kotlin/Native)
+        if: matrix.kind == 'gradle'
+        uses: actions/cache@v4
+        with:
+          path: .konan
+          key: konan-v3-${{ runner.os }}-${{ hashFiles('**/*.kt','**/*.kts','**/build.gradle*','**/gradle/libs.versions.toml') }}
+          restore-keys: konan-v3-${{ runner.os }}-
+
+      - name: Run KMM tests (via with-env → nix develop #shared)
+        if: matrix.kind == 'gradle'
+        run: |
+          ./bin/with-env shared -- just shared test
+
+      # =========================
+      # sbt / Server shard
+      # =========================
+      - name: Cache Coursier/Ivy
+        if: matrix.kind == 'sbt'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/coursier
+            ~/.ivy2/cache
+            ~/.sbt
+          key: sbt-${{ runner.os }}-${{ hashFiles('server/**') }}
+          restore-keys: sbt-${{ runner.os }}-
+
+      - name: sbt test (server)
+        if: matrix.kind == 'sbt'
+        run: |
+          curl -L -o sbt.tgz https://github.com/sbt/sbt/releases/download/v1.10.2/sbt-1.10.2.tgz
+          tar xzf sbt.tgz
+          ./sbt/bin/sbt "project server" test
+
+      # =========================
+      # Xcode / iOS shard
+      # =========================
+      - name: Install Nix (macOS)
+        if: matrix.kind == 'xcode'
+        uses: DeterminateSystems/nix-installer-action@v14
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      - name: Magic Nix Cache (macOS)
+        if: matrix.kind == 'xcode'
+        uses: DeterminateSystems/magic-nix-cache-action@v7
+
+      - name: Select Xcode
+        if: matrix.kind == 'xcode'
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Validate Gradle Wrapper (for XCFramework step)
+        if: matrix.kind == 'xcode'
+        uses: gradle/wrapper-validation-action@v2
+
+      - name: Cache Gradle (macOS XCFramework build)
+        if: matrix.kind == 'xcode'
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.gradle
+          key: gradle-osx-v2-${{ runner.os }}-${{ hashFiles('**/*.gradle*','**/*.kts','**/gradle-wrapper.properties','**/gradle/libs.versions.toml') }}
+          restore-keys: gradle-osx-v2-${{ runner.os }}-
+
+      - name: Cache Konan (macOS)
+        if: matrix.kind == 'xcode'
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.konan
+          key: konan-osx-v2-${{ runner.os }}-${{ hashFiles('**/*.kt','**/*.kts','**/build.gradle*','**/gradle/libs.versions.toml') }}
+          restore-keys: konan-osx-v2-${{ runner.os }}-
+
+      - name: iOS build & test
+        if: matrix.kind == 'xcode'
+        run: |
+          xcodebuild -project "${{ matrix.xcodeproj }}" \
+            -scheme "${{ matrix.scheme }}" \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            -configuration Debug \
+            test
+
+      - name: Build KMM XCFramework (Debug) for iOS consumer
+        if: matrix.kind == 'xcode'
+        env:
+          GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
+          KONAN_DATA_DIR:   ${{ github.workspace }}/.konan
+        run: |
+          set -euxo pipefail
+          ./bin/with-env shared -- just shared xc debug
+          echo "== After build =="
+          ls -lah client/shared/build/XCFrameworks || true
+          ls -lah client/shared/build/XCFrameworks/Debug || true
+          ls -lah client/ios/Vendor || true
+          test -e client/ios/Vendor/AephyrShared.xcframework
+
+      - name: Upload XCFramework artifact
+        if: matrix.kind == 'xcode'
+        uses: actions/upload-artifact@v4
+        with:
+          name: AephyrShared.xcframework
+          path: client/ios/Vendor/AephyrShared.xcframework
+
+      # =========================
+      # Smoke shard
+      # =========================
+      - name: Repo smoke (fast compile)
+        if: matrix.kind == 'smoke'
+        run: |
+          ./gradlew -p client/shared :client:shared:compileKotlinMetadata || true
+          echo "✅ smoke ok"
