@@ -1,4 +1,18 @@
+# ==============================================================================
+# Root Justfile for Monorepo
+#
+# Delegates to project justfiles and provides developer utilities.
+# ==============================================================================
+
 set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+
+[private]
+default:
+  @just --list --unsorted
+
+# ------------------------------------------------------------------------------
+# Path Variables
+# ------------------------------------------------------------------------------
 
 root        := justfile_directory()
 shared_dir  := root / "client/shared"
@@ -6,26 +20,12 @@ ios_dir     := root / "client/ios"
 server_dir  := root / "server"
 WITH_ENV    := root / "bin/with-env"
 
-# --- Delegators to child justfiles ---
 
-shared *ARGS:
-  {{WITH_ENV}} shared -- just --justfile "{{shared_dir}}/justfile" {{ARGS}}
+# ------------------------------------------------------------------------------
+# Developer Quality of Life (QoL) Utilities
+# ------------------------------------------------------------------------------
 
-ios *ARGS:
-  {{WITH_ENV}} ios -- just --justfile "{{ios_dir}}/justfile" {{ARGS}}
-
-server *ARGS:
-  {{WITH_ENV}} server -- just --justfile "{{server_dir}}/justfile" {{ARGS}}
-
-# --- Friendly aliases (match child recipe names) ---
-
-# kmm-test:
-#     bin/with-env shared -- just --justfile "{{shared_dir}}/justfile" test
-
-
-# ---- Developer QoL ----
-
-# creates a new branch
+# Create a new branch interactively
 [group('dev')]
 branch:
   @echo "Select branch type:"
@@ -40,7 +40,58 @@ branch:
     fi \
   done
 
-# creates a draft pull request
+# Create a (draft) pull-request
 [group('dev')]
-draft-pr:
-  @gh pr create --fill --base main --draft
+pr draft="release":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  case "{{draft}}" in
+  draft)
+    gh pr create --fill --base main --draft
+    ;;
+  *)
+    gh pr create --fill --base main
+    ;;
+  esac
+
+# ------------------------------------------------------------------------------
+# Aider Integration
+# ------------------------------------------------------------------------------
+
+# Run aider in the context of a project, with auto-test and file watching.
+[group('dev')]
+aider project *args:
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  case "{{project}}" in
+    root)
+      exec aider --watch-files {{args}}
+      ;;
+    server|ios|shared) 
+      TEST_CMD="bash -lc 'cd {{root}} && just {{project}} test'"
+      exec aider --test-cmd "$TEST_CMD" --auto-test --watch-files {{args}}
+      ;;
+    *) 
+      echo "Usage: just aider (server|ios|shared) [AIDER_ARGS…]" >&2; exit 2
+      ;;
+  esac
+
+# ------------------------------------------------------------------------------
+# Delegators to Child Justfiles
+# ------------------------------------------------------------------------------
+
+# Delegate to the shared project
+[group('delegated')]
+shared *args:
+  {{WITH_ENV}} shared -- just --justfile "{{shared_dir}}/justfile" {{args}}
+
+# Delegate to the ios project
+[group('delegated')]
+ios *args:
+  {{WITH_ENV}} ios -- just --justfile "{{ios_dir}}/justfile" {{args}}
+
+# Delegate to the server project
+[group('delegated')]
+server *args:
+  {{WITH_ENV}} server -- just --justfile "{{server_dir}}/justfile" {{args}}
