@@ -8,7 +8,6 @@ read:
   - client/shared/CONVENTIONS.md
   - client/ios/CONVENTIONS.md
   - server/CONVENTIONS.md
-  - prompt.md
 
 subtree-only: true
 auto-commits: false

@@ -9,8 +9,8 @@
 /* Begin PBXBuildFile section */
 		5BD3AF9D2E804E7200841A49 /* KMPNativeCoroutinesAsync in Frameworks */ = {isa = PBXBuildFile; productRef = 5BD3AF9C2E804E7200841A49 /* KMPNativeCoroutinesAsync */; };
 		5BD3AF9F2E804E7200841A49 /* KMPNativeCoroutinesCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5BD3AF9E2E804E7200841A49 /* KMPNativeCoroutinesCore */; };
-		5BD3B38A2E84361000841A49 /* AephyrShared.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD3B3892E84361000841A49 /* AephyrShared.xcframework */; };
-		5BD3B38B2E84361000841A49 /* AephyrShared.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD3B3892E84361000841A49 /* AephyrShared.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		5BD3B3D72E855DEB00841A49 /* AephyrShared.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD3B3892E84361000841A49 /* AephyrShared.xcframework */; };
+		5BD3B3D82E855DEB00841A49 /* AephyrShared.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD3B3892E84361000841A49 /* AephyrShared.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,13 +31,13 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		5BD3AE1A2E7F04E500841A49 /* Embed Frameworks */ = {
+		5BD3B3D92E855DEB00841A49 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				5BD3B38B2E84361000841A49 /* AephyrShared.xcframework in Embed Frameworks */,
+				5BD3B3D82E855DEB00841A49 /* AephyrShared.xcframework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -76,7 +76,7 @@
 			files = (
 				5BD3AF9D2E804E7200841A49 /* KMPNativeCoroutinesAsync in Frameworks */,
 				5BD3AF9F2E804E7200841A49 /* KMPNativeCoroutinesCore in Frameworks */,
-				5BD3B38A2E84361000841A49 /* AephyrShared.xcframework in Frameworks */,
+				5BD3B3D72E855DEB00841A49 /* AephyrShared.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -136,7 +136,7 @@
 				5B35EA132E4E5C00001B4907 /* Sources */,
 				5B35EA142E4E5C00001B4907 /* Frameworks */,
 				5B35EA152E4E5C00001B4907 /* Resources */,
-				5BD3AE1A2E7F04E500841A49 /* Embed Frameworks */,
+				5BD3B3D92E855DEB00841A49 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
