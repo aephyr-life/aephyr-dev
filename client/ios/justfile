@@ -4,4 +4,8 @@ default:
 
 # Test
 test:
-  xcodebuild test -scheme Aephyr -destination 'platform=iOS Simulator,name=iPhone 17'
+  @xcodebuild test \
+    -scheme Aephyr \
+    -destination 'platform=iOS Simulator,name=iPhone 17' \
+    -quiet 2>&1 \
+    | xcbeautify --quiet

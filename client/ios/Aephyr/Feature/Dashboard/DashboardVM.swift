@@ -21,8 +21,13 @@ final class DashboardVM: ObservableObject {
     private func bindState() {
         bindTask = Task { @MainActor [weak self, facade] in
             do {
-                // Let the type infer to NativeFlowAsyncSequence
-                for try await ui in asyncSequence(for: facade.observeState()) {
+                // Explicitly cast to the expected Kotlin Flow type
+                let flow = facade.observeState() as! Kotlinx_coroutines_coreFlow
+                for try await ui in asyncSequence(
+                    for: flow,
+                    Output.self,
+                    Error.self
+                ) {
                     guard let self else { return }
                     self.isLoading = ui.isLoading
                     self.hero = ui.hero
@@ -35,11 +40,25 @@ final class DashboardVM: ObservableObject {
     }
 
     func reload() async {
-        do { try await asyncFunction(for: facade.refresh()) } catch { /* handle */ }
+        do {
+            let suspendFun = facade.refresh() as! KotlinSuspendFunction0
+            _ = try await asyncFunction(
+                for: suspendFun,
+                KotlinUnit.self,
+                Error.self
+            )
+        } catch { /* handle */ }
     }
 
     func remove(id: String) async {
-        do { try await asyncFunction(for: facade.remove(id: id)) } catch { /* handle */ }
+        do {
+            let suspendFun = facade.remove(id: id) as! KotlinSuspendFunction1
+            _ = try await asyncFunction(
+                for: suspendFun,
+                KotlinUnit.self,
+                Error.self
+            )
+        } catch { /* handle */ }
     }
 }
 
