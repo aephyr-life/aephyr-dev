@@ -84,14 +84,14 @@ aider project *args:
 # Delegate to the shared project
 [group('delegated')]
 shared *args:
-  {{WITH_ENV}} shared -- just --justfile "{{shared_dir}}/justfile" {{args}}
+  @{{WITH_ENV}} shared -- just --justfile "{{shared_dir}}/justfile" {{args}}
 
 # Delegate to the ios project
 [group('delegated')]
 ios *args:
-  {{WITH_ENV}} ios -- just --justfile "{{ios_dir}}/justfile" {{args}}
+  @{{WITH_ENV}} ios -- just --justfile "{{ios_dir}}/justfile" {{args}}
 
 # Delegate to the server project
 [group('delegated')]
 server *args:
-  {{WITH_ENV}} server -- just --justfile "{{server_dir}}/justfile" {{args}}
+  @{{WITH_ENV}} server -- just --justfile "{{server_dir}}/justfile" {{args}}

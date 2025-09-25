@@ -10,12 +10,9 @@ import SwiftUI
 @main
 struct AephyrApp: App {
     
-    @AppStorage("energyUnit")
-    private var selectedRaw: String = EnergyUnit.kilocalories.rawValue
-    
     var body: some Scene {
         WindowGroup {
-            DashboardView()
+            
         }
     }
 }
