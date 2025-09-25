@@ -7,8 +7,8 @@ struct DashboardView: View {
 
     init() {
         let factory = K_FoodStoreFactory()
-        let foodSvc = factory.mock()   // KMM seeded service
-        let facade  = DashboardFacade(food: foodSvc)
+        let foodSvc = factory.instance()   // KMM seeded service
+        let facade  = DashboardFacade()
         _vm = StateObject(wrappedValue: DashboardVM(facade: facade))
     }
 
@@ -83,15 +83,15 @@ private struct FoodRowKMMAdapter: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.name)
-                Text("\(item.grams) g")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+//                Text("\(item.grams) g")
+//                    .font(.caption)
+//                    .foregroundStyle(.secondary)
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 2) {
-                Text("\(item.kcal) kcal")
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
+//                Text("\(item.kcal) kcal")
+//                    .monospacedDigit()
+//                    .foregroundStyle(.secondary)
             }
         }
         .contentShape(Rectangle())
