@@ -1,3 +1,4 @@
+import com.google.devtools.ksp.gradle.KspAATask
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 
@@ -9,6 +10,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kmp.nativecoroutines)
     alias(libs.plugins.sqldelight)
     alias(libs.plugins.kover)
     alias(libs.plugins.kotest)
@@ -120,4 +122,24 @@ tasks.withType<Test>().configureEach {
 // nice shortcut to generate HTML & XML
 tasks.register("coverage") {
     dependsOn("koverHtmlReport", "koverXmlReport")
+}
+
+pluginManager.withPlugin("app.cash.sqldelight") {
+    // Match all SQLDelight "generate ... Interface" tasks (name is version-dependent)
+    val sqlDelightInterfaceTasks = tasks.matching {
+        it.name.startsWith("generate") &&
+                it.name.contains("FoodDb") &&
+                it.name.endsWith("Interface")
+    }
+
+    // Ensure KSP tasks (for all targets, e.g., iosArm64, iosX64, etc.) run after SQLDelight generation
+    tasks.withType<KspAATask>().configureEach {
+        dependsOn(sqlDelightInterfaceTasks)
+    }
+
+    // Also register the generated directory as a source dir, marking it builtBy those tasks.
+    val genDir = layout.buildDirectory.dir("generated/sqldelight/code/FoodDb/commonMain")
+    kotlin.sourceSets.named("commonMain") {
+        kotlin.srcDir(files(genDir).builtBy(sqlDelightInterfaceTasks))
+    }
 }

@@ -34,6 +34,7 @@ kotest-framework-engine = { module = "io.kotest:kotest-framework-engine", versio
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+kmp-nativecoroutines  = { id = "com.rickclephas.kmp.nativecoroutines",  version.ref = "kmpnc" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotest = { id = "io.kotest", version.ref = "kotest" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }

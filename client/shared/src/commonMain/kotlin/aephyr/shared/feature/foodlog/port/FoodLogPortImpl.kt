@@ -16,13 +16,11 @@ internal class FoodLogPortImpl(
     private val store: FoodLogLocalStore
 ) : FoodLogPort {
 
-    override fun observeDay(dayKey: String): Flow<FoodLogDay> {
-        val date = LocalDate.parse(dayKey) // ensure ISO yyyy-MM-dd
+    override fun observeDay(date: LocalDate): Flow<FoodLogDay> {
         return store.observeDay(date).map { items -> FoodLogDay.of(date, items) }
     }
 
     override suspend fun add(command: AddFoodLogItemCommand): FoodLogItem {
-        // Build domain item
         val id = FoodLogItemId(genId())
         val consumedInstant = Instant.fromEpochMilliseconds(command.consumedAtMillis)
         val local = consumedInstant.toLocalDateTime(TimeZone.currentSystemDefault())
