@@ -10,6 +10,14 @@ default:
   @just --list
 
 [group('kmm')]
+stop:
+  {{GRADLEW}} --stop
+
+[group('kmm')]
+clean:
+  {{GRADLEW}} -p "{{THIS}}" clean
+
+[group('kmm')]
 test:
   {{GRADLEW}} -p "{{THIS}}" clean assemble check
 
@@ -58,7 +66,4 @@ xc mode="debug":
   cp -R "$SRC" "$DST"
 
   [[ -d "$DST" ]] || { echo "ERROR: Destination copy missing: $DST"; exit 1; }
-
   echo "✅ Copied ${CAP} XCFramework → $DST"
-  ls -lah "$IOS_VENDOR" || true
-  ls -lah "$(dirname "$SRC")" || true

@@ -1,20 +1,31 @@
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 
+java {
+    toolchain { languageVersion.set(JavaLanguageVersion.of(21)) }
+}
+
 plugins {
+    alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.sqldelight)
+    alias(libs.plugins.kover)
+    alias(libs.plugins.kotest)
+    alias(libs.plugins.test.logger)
 }
 
 kotlin {
 
-    jvmToolchain(17)
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
+    jvmToolchain(21)
 
     applyDefaultHierarchyTemplate()
 
-    sourceSets.all {
-        languageSettings.optIn("kotlin.experimental.ExperimentalObjCName")
-    }
+    jvm()
 
     // iOS targets
     iosX64()
@@ -33,6 +44,14 @@ kotlin {
     }
 
     sourceSets {
+        all {
+            languageSettings.optIn("kotlin.experimental.ExperimentalObjCName")
+        }
+        val jvmMain by getting {
+            dependencies {
+                implementation(libs.sqldelight.driver)
+            }
+        }
         val commonMain by getting {
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
@@ -43,11 +62,41 @@ kotlin {
                 implementation(libs.ktor.client.content.negotiation)
                 implementation(libs.ktor.serialization.kotlinx.json)
                 implementation(libs.ktor.client.logging)
+                implementation(libs.kmp.nativecoroutines.core)
+                implementation(libs.sqldelight.runtime)
+                implementation(libs.sqldelight.coroutines)
             }
         }
-        val commonTest by getting
-        val iosMain by getting { dependencies { implementation(libs.ktor.client.darwin) } }
+        val jvmTest by getting {
+            dependencies {
+                implementation(libs.kotest.runner)
+            }
+        }
+        val commonTest by getting {
+            dependencies {
+                implementation(libs.kotest.assert)
+                implementation(libs.kotest.framework.engine)
+            }
+        }
+        val iosMain by getting {
+            dependencies {
+                implementation(libs.ktor.client.darwin)
+                implementation(libs.sqldelight.native.driver)
+            }
+        }
     }
+}
+
+sqldelight {
+    databases {
+        create("FoodDb") {
+            packageName.set("aephyr.shared.foodlog.db")
+            // schemaOutputDirectory, verifyMigrations… if you want
+        }
+    }
+}
+
+kover {
 }
 
 tasks.register("packForXcode") {
@@ -58,4 +107,17 @@ tasks.register("packForXcode") {
         val xc = dir.resolve("AephyrShared.xcframework")
         println("XCFramework (Debug): ${xc.absolutePath}")
     }
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+    reports {
+        junitXml.required.set(true)   // build/test-results/test/*.xml
+        html.required.set(true)       // build/reports/tests/test/index.html
+    }
+}
+
+// nice shortcut to generate HTML & XML
+tasks.register("coverage") {
+    dependsOn("koverHtmlReport", "koverXmlReport")
 }

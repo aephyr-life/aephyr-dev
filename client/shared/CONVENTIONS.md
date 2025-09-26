@@ -4,7 +4,6 @@
 - Prefer `@JvmInline value class` for tiny domain wrappers (IDs, units, amounts).
 - Avoid `!!`. Use null-safety operators and sealed classes/ADTs for sum types.
 - Error handling via `Result`/Either-like patterns, not exceptions for control flow.
-- KMM interop: Any class or type intended to be consumed by Swift must be prefixed `K_`.
 - One class per file. File name equals public class name.
 
 ## Layout & Build

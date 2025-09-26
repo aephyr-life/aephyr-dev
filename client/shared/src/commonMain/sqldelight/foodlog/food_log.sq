@@ -1,0 +1,36 @@
+CREATE TABLE FoodLogItemDb (
+  id TEXT NOT NULL PRIMARY KEY,
+  date TEXT NOT NULL,                 -- ISO yyyy-MM-dd (LocalDate)
+  time_minutes INTEGER,               -- nullable (null = “no time”)
+  name TEXT NOT NULL,
+  grams REAL,                         -- Mass serialized as grams
+  energy_kj REAL,                     -- Energy serialized as kilojoules
+  macros_json TEXT,                   -- JSON (nullable)
+  notices_json TEXT,                  -- JSON (nullable)
+  consumed_at_epoch_ms INTEGER NOT NULL,
+  logged_at_epoch_ms INTEGER NOT NULL,
+  source_id TEXT,
+  dirty INTEGER NOT NULL DEFAULT 0,   -- for future sync
+  deleted INTEGER NOT NULL DEFAULT 0  -- tombstone
+);
+
+getDay:
+SELECT * FROM FoodLogItemDb
+WHERE date = ? AND deleted = 0
+ORDER BY
+  CASE WHEN time_minutes IS NULL THEN 1 ELSE 0 END,
+  time_minutes ASC,
+  name ASC,
+  id ASC;
+
+insertOrReplace:
+INSERT OR REPLACE INTO FoodLogItemDb(
+  id, date, time_minutes, name, grams, energy_kj, macros_json, notices_json,
+  consumed_at_epoch_ms, logged_at_epoch_ms, source_id, dirty, deleted
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+markDeleted:
+UPDATE FoodLogItemDb SET deleted = 1, dirty = 1 WHERE id = ?;
+
+purge:
+DELETE FROM FoodLogItemDb WHERE id = ?;
