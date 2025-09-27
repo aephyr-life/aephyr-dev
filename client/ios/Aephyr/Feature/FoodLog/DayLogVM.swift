@@ -40,4 +40,9 @@ final class DayLogVM: ObservableObject {
         do { _ = try await bridge.add(cmd) }
         catch { print("add failed:", error) }
     }
+    
+    func remove(_ id: String) async {
+        do { _ = try await bridge.remove(id: id) }
+        catch { print("remove failed:", error) }
+    }
 }

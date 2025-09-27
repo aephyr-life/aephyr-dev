@@ -32,6 +32,23 @@ struct DayLogView: View {
                 .foregroundStyle(.secondary)
         }
     }
+    
+    @ViewBuilder
+    private func list(vm: DayLogVM) -> some View {
+        List {
+            ForEach(Array(vm.day.items.enumerated()), id: \.offset) { _, item in
+                row(for: item)
+            }
+            .onDelete { offsets in
+                Task { @MainActor in
+                    for index in offsets {
+                        let itemId = vm.day.items[index].id
+                        await vm.remove(itemId)
+                    }
+                }
+            }
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -43,11 +60,7 @@ struct DayLogView: View {
                         description: Text("Tap + to add your first item.")
                     )
                 } else {
-                    List {
-                        ForEach(Array(vm.day.items.enumerated()), id: \.offset) { _, item in
-                            row(for: item)
-                        }
-                    }
+                    list(vm: vm)
                 }
             }
             .navigationTitle("Today")
