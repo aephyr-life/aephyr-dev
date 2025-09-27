@@ -1,42 +1,75 @@
 import SwiftUI
 
 struct DayLogView: View {
-    @StateObject private var vm: DayLogVM
-    @State private var energyPrefs: EnergyPrefs = .kilocalories
+    @EnvironmentObject var settings: AppSettings
+    @StateObject var vm: DayLogVM
+    @State private var showQuickAdd = false
+    @State private var today = Calendar.current.dateComponents([.year, .month, .day], from: Date())
 
-    init(bridge: FoodLogBridge) {
-        _vm = StateObject(wrappedValue: DayLogVM(bridge: bridge))
+    /// Local formatter to avoid calling a member on the EnvironmentObject.
+    private func energyString(_ energy: Measurement<UnitEnergy>?) -> String {
+        let formatter = MeasurementFormatter()
+        formatter.unitStyle = .medium
+        formatter.numberFormatter.numberStyle = .decimal
+        return energy.map { m in formatter.string(from: m) } ?? ""
+    }
+
+    @ViewBuilder
+    private func row(for item: SFoodLogItem) -> some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text(item.name).font(.headline)
+                if let portion = item.portion {
+                    Text(portion.formatted())
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .opacity(portion.value == 0 ? 0 : 1) // or .hidden()
+                }
+            }
+            Spacer()
+            Text(energyString(item.energy))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
     }
 
     var body: some View {
-        List {
-            if let day = vm.day {
-                Section(header: Text(formatted(day.date))) {
-                    ForEach(day.items) { item in
-                        HStack {
-                            Text(item.name)
-                            Spacer()
-                            // TEMP: if you haven’t added formatting helpers yet:
-                            Text(item.energy.map { MeasurementFormatter().string(from: $0) } ?? "—")
-                                .monospacedDigit()
-                                .foregroundStyle(.secondary)
+        NavigationStack {
+            Group {
+                if vm.day.items.isEmpty {
+                    ContentUnavailableView(
+                        "No items yet",
+                        systemImage: "fork.knife",
+                        description: Text("Tap + to add your first item.")
+                    )
+                } else {
+                    List {
+                        ForEach(Array(vm.day.items.enumerated()), id: \.offset) { _, item in
+                            row(for: item)
                         }
                     }
-                    Text("Total: \(day.totalEnergyString(energyPrefs))").bold()
                 }
-            } else {
-                Text("Loading…")
+            }
+            .navigationTitle("Today")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { showQuickAdd = true } label: { Image(systemName: "plus") }
+                }
+            }
+            .sheet(isPresented: $showQuickAdd) {
+                QuickAddSheet { name, mass, energy, protein, fat, carb in
+                    await vm.add(.init(
+                        date: today,
+                        name: name,
+                        portion: mass,
+                        energy: energy,
+                        macros: SMacros(protein: protein, fat: fat, carb: carb)
+                    ))
+                }
             }
         }
-        .task { @MainActor in
-            let today = Calendar.current.dateComponents([.year,.month,.day], from: Date())
-            vm.start(for: today)
-        }
-    }
-
-    private func formatted(_ comps: DateComponents) -> String {
-        let cal = Calendar.current
-        guard let date = cal.date(from: comps) else { return "—" }
-        let f = DateFormatter(); f.dateStyle = .medium; return f.string(from: date)
+        .onAppear { vm.start(for: today) }
+        .onDisappear { vm.stop() }
     }
 }
+

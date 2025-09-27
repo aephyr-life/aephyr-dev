@@ -10,11 +10,14 @@ import SwiftUI
 
 @MainActor
 final class DayLogVM: ObservableObject {
-    @Published private(set) var day: SFoodLogDay?
+    @Published private(set) var day: SFoodLogDay
     private let bridge: FoodLogBridge
     private var task: Task<Void, Never>?
 
-    init(bridge: FoodLogBridge) { self.bridge = bridge }
+    init(bridge: FoodLogBridge) {
+        self.bridge = bridge
+        self.day = .empty(for: Calendar.current.dateComponents([.year,.month,.day], from: Date()))
+    }
 
     func start(for date: DateComponents) {
         stop()
@@ -23,7 +26,8 @@ final class DayLogVM: ObservableObject {
                 for try await d in bridge.observeDay(date: date) {
                     self.day = d
                 }
-            } catch is CancellationError {} catch {
+            } catch is CancellationError {
+            } catch {
                 print("observe failed:", error)
             }
         }
@@ -31,16 +35,9 @@ final class DayLogVM: ObservableObject {
 
     func stop() { task?.cancel(); task = nil }
 
-    func addSample() async {
-        do {
-            let portion = Measurement(value: 170, unit: UnitMass.grams)
-            let energy  = Measurement(value: 100, unit: UnitEnergy.kilocalories) // or .kilojoules
-            _ = try await bridge.add(.init(
-                date: Calendar.current.dateComponents([.year, .month, .day], from: Date()),
-                name: "Greek Yogurt",
-                portion: portion,
-                energy: energy
-            ))
-        } catch { print("add failed:", error) }
+    // generic add (you can keep addSample for quick testing)
+    func add(_ cmd: SAddFoodLogItemCommand) async {
+        do { _ = try await bridge.add(cmd) }
+        catch { print("add failed:", error) }
     }
 }

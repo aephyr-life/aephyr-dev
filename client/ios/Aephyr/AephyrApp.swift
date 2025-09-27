@@ -11,9 +11,13 @@ import SwiftUI
 @main
 struct AephyrApp: App {
     
+    @StateObject private var settings = AppSettings()
+    
     var body: some Scene {
+        let bridge = KMMFoodLogBridge(port: FoodLogFactory.shared.local())
         WindowGroup {
-            DayLogView(bridge: KMMFoodLogBridge(port: FoodLogFactory.shared.local()))
+            DayLogView(vm: DayLogVM(bridge: bridge))
+                .environmentObject(settings)
         }
     }
 }
