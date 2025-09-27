@@ -1,34 +1,128 @@
-client/ios/Vendor/
+# =========================
+# OS / Editor cruft
+# =========================
+.DS_Store
+.AppleDouble
+.LSOverride
 
+# JetBrains / IntelliJ / Android Studio
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Vim / Emacs / misc temp files
+*~
+*.swp
+*.swo
+*.tmp
+
+# Aider (your AI helper scratch)
+.aider*
+
+# =========================
+# Environment / local dev
+# =========================
 .env
+.env.*
+!.env.example
+!.env.sample
+.envrc
 .envrc.local
 .dev/
 
-# direnv / nix
+# direnv / Nix / devenv
 .direnv/
-result*/
 .devenv/
+result*/
+result
 
-# sbt build output
-target/
-project/target/
-project/project/
-
-*.log
-
-# gradle
+# =========================
+# Build output / tooling caches
+# (Gradle, Kotlin, K/N, KSP, SQLDelight, Kover reports are under build/)
+# =========================
 .gradle/
 build/
 out/
 .konan/
+.kotlin/
 
-# Xcode / iOS
-*.xcworkspace/        # ignore whole workspace directories
-**/*.xcworkspace/*
-*.xcuserdatad/
-*.xcuserstate
+# sbt (if/when you add Scala modules)
+target/
+project/target/
+project/project/
+
+# Logs & diagnostics
+*.log
+*.log.*
+*.out
+*.err
+*.trace
+*.hprof
+
+# =========================
+# Kotlin Multiplatform specifics
+# =========================
+# KSP generated code & caches live under build/ (already ignored)
+
+# If you later enable SQLDelight schema export to a dedicated folder,
+# keep the schema in git (do NOT ignore), e.g.:
+# !schema/
+
+# =========================
+# iOS / Xcode
+# =========================
 DerivedData/
+*.xcuserdatad/
+**/*.xcuserstate
 
-.aider*
+# Keep workspaces & projects in git, ignore only user-specific data:
+**/*.xcworkspace/xcuserdata/
+**/*.xcodeproj/xcuserdata/
 
-**/*node_modules/
+# If you intentionally want to ignore a vendor drop-in folder:
+client/ios/Vendor/
+
+# Swift Package Manager
+.build/
+.swiftpm/xcode/package.xcworkspace/xcuserdata/
+# Keep lockfile for reproducibility:
+!**/Package.resolved
+
+# CocoaPods (choose policy: see notes below)
+**/Pods/
+!**/Podfile.lock
+
+# Carthage (if you ever use it)
+Carthage/Build/
+
+# Fastlane (if you add it)
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# Archives / artifacts (consider Git LFS, see notes)
+*.ipa
+*.xcarchive
+*.dSYM.zip
+*.dSYM
+
+# =========================
+# Node
+# =========================
+**/node_modules/
+**/.pnpm-store/
+**/.yarn/*
+!**/.yarn/patches/
+!**/.yarn/plugins/
+!**/.yarn/releases/
+!**/.yarn/sdks/
+!**/.yarn/versions/
+# Keep lockfiles for reproducible builds
+!**/package-lock.json
+!**/yarn.lock
+!**/pnpm-lock.yaml
+!**/bun.lockb
+

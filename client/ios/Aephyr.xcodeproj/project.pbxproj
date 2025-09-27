@@ -7,10 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5B95E3E22E87177500264A5B /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 5B95E3E12E87177500264A5B /* libsqlite3.tbd */; };
+		5B95E40E2E88193100264A5B /* Settings.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 5B95E40D2E88193100264A5B /* Settings.bundle */; };
+		5B95E4102E881AD500264A5B /* AephyrShared.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5B95E40F2E881AD500264A5B /* AephyrShared.xcframework */; };
 		5BD3AF9D2E804E7200841A49 /* KMPNativeCoroutinesAsync in Frameworks */ = {isa = PBXBuildFile; productRef = 5BD3AF9C2E804E7200841A49 /* KMPNativeCoroutinesAsync */; };
 		5BD3AF9F2E804E7200841A49 /* KMPNativeCoroutinesCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5BD3AF9E2E804E7200841A49 /* KMPNativeCoroutinesCore */; };
-		5BD3B3D72E855DEB00841A49 /* AephyrShared.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD3B3892E84361000841A49 /* AephyrShared.xcframework */; };
-		5BD3B3D82E855DEB00841A49 /* AephyrShared.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD3B3892E84361000841A49 /* AephyrShared.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -37,7 +38,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				5BD3B3D82E855DEB00841A49 /* AephyrShared.xcframework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -48,7 +48,9 @@
 		5B35EA172E4E5C00001B4907 /* Aephyr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Aephyr.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5B35EA252E4E5C08001B4907 /* AephyrTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AephyrTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5B35EA2F2E4E5C08001B4907 /* AephyrUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AephyrUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		5BD3B3892E84361000841A49 /* AephyrShared.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = AephyrShared.xcframework; path = Vendor/AephyrShared.xcframework; sourceTree = "<group>"; };
+		5B95E3E12E87177500264A5B /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/usr/lib/libsqlite3.tbd; sourceTree = DEVELOPER_DIR; };
+		5B95E40D2E88193100264A5B /* Settings.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; path = Settings.bundle; sourceTree = "<group>"; };
+		5B95E40F2E881AD500264A5B /* AephyrShared.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = AephyrShared.xcframework; path = Vendor/AephyrShared.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -74,9 +76,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5B95E4102E881AD500264A5B /* AephyrShared.xcframework in Frameworks */,
+				5B95E3E22E87177500264A5B /* libsqlite3.tbd in Frameworks */,
 				5BD3AF9D2E804E7200841A49 /* KMPNativeCoroutinesAsync in Frameworks */,
 				5BD3AF9F2E804E7200841A49 /* KMPNativeCoroutinesCore in Frameworks */,
-				5BD3B3D72E855DEB00841A49 /* AephyrShared.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -100,7 +103,8 @@
 		5B1B8DAD2E4F554A00AD5D00 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				5BD3B3892E84361000841A49 /* AephyrShared.xcframework */,
+				5B95E40F2E881AD500264A5B /* AephyrShared.xcframework */,
+				5B95E3E12E87177500264A5B /* libsqlite3.tbd */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -108,6 +112,7 @@
 		5B35EA0E2E4E5C00001B4907 = {
 			isa = PBXGroup;
 			children = (
+				5B95E40D2E88193100264A5B /* Settings.bundle */,
 				5B35EA192E4E5C00001B4907 /* Aephyr */,
 				5B35EA282E4E5C08001B4907 /* AephyrTests */,
 				5B35EA322E4E5C08001B4907 /* AephyrUITests */,
@@ -252,6 +257,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5B95E40E2E88193100264A5B /* Settings.bundle in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
