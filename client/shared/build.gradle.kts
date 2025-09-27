@@ -1,6 +1,6 @@
-import com.google.devtools.ksp.gradle.KspAATask
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
+import app.cash.sqldelight.gradle.SqlDelightExtension
 
 java {
     toolchain { languageVersion.set(JavaLanguageVersion.of(21)) }
@@ -96,11 +96,15 @@ kotlin {
     }
 }
 
-sqldelight {
-    databases {
-        create("FoodDb") {
-            packageName.set("aephyr.shared.foodlog.db")
-            // schemaOutputDirectory, verifyMigrations… if you want
+plugins.withId("app.cash.sqldelight") {
+    extensions.configure<SqlDelightExtension> {
+        databases {
+            create("FoodDb") {
+                packageName.set("aephyr.shared.foodlog.db")
+                srcDirs("src/commonMain/sqldelight") // be explicit; helps CI/first run
+                // schemaOutputDirectory.set(file("src/commonMain/sqldelight/schema"))
+                // deriveSchemaFromMigrations.set(true)
+            }
         }
     }
 }
