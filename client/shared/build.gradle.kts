@@ -13,7 +13,7 @@ plugins {
     alias(libs.plugins.kmp.nativecoroutines)
     alias(libs.plugins.sqldelight)
     alias(libs.plugins.kover)
-    alias(libs.plugins.kotest)
+    //alias(libs.plugins.kotest)
     alias(libs.plugins.test.logger)
 }
 
