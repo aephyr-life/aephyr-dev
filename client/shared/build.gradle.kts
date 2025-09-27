@@ -17,6 +17,17 @@ plugins {
     alias(libs.plugins.test.logger)
 }
 
+extensions.configure<SqlDelightExtension> {
+    databases {
+        create("FoodDb") {
+            packageName.set("aephyr.shared.foodlog.db")
+            srcDirs("src/commonMain/sqldelight")
+            // schemaOutputDirectory.set(file("src/commonMain/sqldelight/schema"))
+            // deriveSchemaFromMigrations.set(true)
+        }
+    }
+}
+
 dependencies {
     add("kspCommonMainMetadata", libs.kmp.nativecoroutines.ksp)   // <-- processor
 }
@@ -91,19 +102,6 @@ kotlin {
             dependencies {
                 implementation(libs.ktor.client.darwin)
                 implementation(libs.sqldelight.native.driver)
-            }
-        }
-    }
-}
-
-plugins.withId("app.cash.sqldelight") {
-    extensions.configure<SqlDelightExtension> {
-        databases {
-            create("FoodDb") {
-                packageName.set("aephyr.shared.foodlog.db")
-                srcDirs("src/commonMain/sqldelight") // be explicit; helps CI/first run
-                // schemaOutputDirectory.set(file("src/commonMain/sqldelight/schema"))
-                // deriveSchemaFromMigrations.set(true)
             }
         }
     }
