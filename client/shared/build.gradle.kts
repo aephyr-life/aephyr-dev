@@ -17,6 +17,10 @@ plugins {
     alias(libs.plugins.test.logger)
 }
 
+dependencies {
+    add("kspCommonMainMetadata", libs.kmp.nativecoroutines.ksp)   // <-- processor
+}
+
 kotlin {
 
     compilerOptions {

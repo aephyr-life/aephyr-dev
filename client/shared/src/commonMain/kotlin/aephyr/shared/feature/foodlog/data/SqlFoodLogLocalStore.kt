@@ -32,7 +32,7 @@ internal class SqlFoodLogLocalStore(
             date = item.consumedAt.day.toString(),
             time_minutes = item.consumedAt.timeMinutes?.toLong(),
             name = item.name.value,
-            grams = item.portion?.let { it.valueInGrams() },
+            grams = item.mass?.let { it.valueInGrams() },
             energy_kj = item.energy?.to(EnergyUnit.KILOJOULE),
             macros_json = item.macros?.let { json.encodeToString(it) },
             notices_json = if (item.notices.isEmpty()) null else json.encodeToString(item.notices),
@@ -64,7 +64,7 @@ private fun FoodLogItemDb.toDomain(json: Json): FoodLogItem =
             timeMinutes = time_minutes?.toInt()
         ),
         name = FoodName(name),
-        portion = grams?.let { Mass.g(it) },
+        mass = grams?.let { Mass.g(it) },
         energy = energy_kj?.let { Energy.kJ(it) },
         macros = macros_json?.let { json.decodeFromString<Macros>(it) },
         notices = notices_json?.let { json.decodeFromString<List<Notice>>(it) } ?: emptyList(),

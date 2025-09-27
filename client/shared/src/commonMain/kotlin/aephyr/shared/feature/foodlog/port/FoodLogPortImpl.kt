@@ -21,19 +21,11 @@ internal class FoodLogPortImpl(
     }
 
     override suspend fun add(command: AddFoodLogItemCommand): FoodLogItem {
-        val id = FoodLogItemId(genId())
-        val consumedInstant = Instant.fromEpochMilliseconds(command.consumedAtMillis)
-        val local = consumedInstant.toLocalDateTime(TimeZone.currentSystemDefault())
-        val consumedAt = DietMoment(
-            day = local.date,
-            timeMinutes = local.hour * 60 + local.minute
-        )
-
         val item = FoodLogItem(
-            id = id,
-            consumedAt = consumedAt,
+            id = FoodLogItemId(genId()),
+            consumedAt = command.consumedAt,
             name = command.name,
-            portion = command.grams,
+            mass = command.mass,
             energy = command.energy,
             macros = command.macros,
             notices = emptyList(),

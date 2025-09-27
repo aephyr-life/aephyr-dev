@@ -9,7 +9,7 @@ data class FoodLogItem (
     val id: FoodLogItemId,
     val consumedAt: DietMoment,
     val name: FoodName,
-    val portion: Mass? = null,
+    val mass: Mass? = null,
     val energy: Energy? = null,
     val macros: Macros? = null,
     val notices: List<Notice> = emptyList(),

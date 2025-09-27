@@ -1,42 +1,73 @@
-//
-//  KMMFoodLogBridge.swift
-//  Aephyr
-//
-//  Created by Martin Pallmann on 26.09.25.
-//
+import AephyrShared
+import KMPNativeCoroutinesAsync // keep for Flow -> AsyncSequence
 
+final class KMMFoodLogBridge: FoodLogBridge {
+    private let port: FoodLogPort
+    init(port: FoodLogPort) { self.port = port }
 
-//import AephyrShared
-//import KMPNativeCoroutinesAsync
-//
-//final class KMMFoodLogBridge: FoodLogBridge {
-//    private let port: FoodLogPort
-//
-//    init(port: FoodLogPort) { self.port = port }
-//
-//    func observeDay(date: DateComponents) -> AsyncThrowingStream<SFoodLogDay, Error> {
-//        AsyncThrowingStream { continuation in
-//            Task {
-//                do {
-//                    let kDate = try KMMDate.toKotlinLocalDate(date)
-//                    for try await kDay in asyncSequence(for: port.observeDay(date: kDate)) {
-//                        continuation.yield(SFoodLogDay(kDay))
-//                    }
-//                    continuation.finish()
-//                } catch {
-//                    continuation.finish(throwing: error)
-//                }
-//            }
-//        }
-//    }
-//
-//    func add(_ cmd: SAddFoodLogItemCommand) async throws -> SFoodLogItem {
-//        let kCmd = try AddFoodLogItemCommand.from(cmd)
-//        let added = try await port.add(command: kCmd)
-//        return SFoodLogItem(added)
-//    }
-//
-//    func remove(id: SFoodLogItemID) async throws {
-//        try await port.remove(id: FoodLogItemId.from(id))
-//    }
-//}
+    // Flow<T> -> AsyncThrowingStream<T, Error> (this part stays the same)
+    func observeDay(date: DateComponents) -> AsyncThrowingStream<SFoodLogDay, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    let kDate = try KMMDateBridge.toLocalDate(date)
+                    for try await kDay in asyncSequence(for: port.observeDay(date: kDate)) {
+                        continuation.yield(SFoodLogDay(from: kDay))
+                    }
+                    continuation.finish()
+                } catch { continuation.finish(throwing: error) }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    // Wrap the triple-callback suspend export with a continuation
+    func add(_ cmd: SAddFoodLogItemCommand) async throws -> SFoodLogItem {
+        let kCmd = try AddFoodLogItemCommand.from(cmd)
+
+        let added: FoodLogItem = try await withCheckedThrowingContinuation { cont in
+            // 1) Get the callback-taking function
+            let op = port.add(command: kCmd)
+
+            // 2) Call it with (success, failure, cancellation) -> canceller
+            _ = op(
+                { item, _ in
+                    cont.resume(returning: item)
+                    return KotlinUnit()   // satisfy KotlinUnit return
+                },
+                { error, _ in
+                    cont.resume(throwing: error)
+                    return KotlinUnit()
+                },
+                { error, _ in           // cancellation callback (sometimes nil)
+                    cont.resume(throwing: error) //  ?? CancellationError()
+                    return KotlinUnit()
+                }
+            )
+        }
+
+        return SFoodLogItem(from: added)
+    }
+
+    func remove(id: String) async throws {
+
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+            let op = port.remove(id: id)
+            _ = op(
+                { _, _ in               // success for Unit
+                    cont.resume(returning: ())
+                    return KotlinUnit()
+                },
+                { error, _ in
+                    cont.resume(throwing: error)
+                    return KotlinUnit()
+                },
+                { error, _ in
+                    cont.resume(throwing: error)
+                    return KotlinUnit()
+                }
+            )
+        }
+    }
+}
+

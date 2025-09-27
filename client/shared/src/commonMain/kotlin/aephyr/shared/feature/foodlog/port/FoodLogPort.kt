@@ -6,8 +6,6 @@ import aephyr.shared.feature.foodlog.model.FoodLogItemId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDate
 import com.rickclephas.kmp.nativecoroutines.NativeCoroutines
-import com.rickclephas.kmp.nativecoroutines.NativeCoroutinesState
-import com.rickclephas.kmp.nativecoroutines.NativeCoroutinesRefined
 
 @kotlin.time.ExperimentalTime
 interface FoodLogPort {

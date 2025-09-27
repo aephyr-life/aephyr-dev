@@ -140,13 +140,39 @@ extension DietMoment {
 }
 
 extension SFoodLogItem {
-    /// Render the item’s energy with prefs, or “—” if nil.
-    func energyString(_ prefs: EnergyPrefs) -> String {
-        energy?.formatted(prefs) ?? "—"
+    init(from k: FoodLogItem) {
+        // value classes -> Any in Swift; cast to String
+        self.id         = (k.id   as? String) ?? String(describing: k.id)
+        self.itemId     = self.id
+        self.name       = (k.name as? String) ?? String(describing: k.name)
+
+        self.consumedAt = SDietMoment(k.consumedAt)
+
+        self.portion    = k.mass   .map { Measurement<UnitMass>(kmm: $0) }
+        self.energy     = k.energy .map { Measurement<UnitEnergy>(kmm: $0) }
+        self.macros     = k.macros .map(SMacros.init)
+        self.notices    = k.notices.map { "\($0)" }
+
+        // you can map Instant precisely now:
+        self.loggedAt   = Date(timeIntervalSince1970:
+                               TimeInterval(k.loggedAt.toEpochMilliseconds()) / 1000)
     }
 }
 
+
 extension SFoodLogDay {
+    init(from k: FoodLogDay) {
+        self.date  = KMMDateBridge.toDateComponents(k.date)
+        self.items = k.items.map { SFoodLogItem(from: $0) }
+
+        // If your KMM day has a total, prefer it. Otherwise sum best-effort:
+        let kcal = k.items
+            .compactMap { $0.energyBestEffort() }
+            .map { Measurement<UnitEnergy>(kmm: $0).converted(to: .kilocalories).value }
+            .reduce(0, +)
+        self.totalEnergy = Measurement(value: kcal, unit: .kilocalories)
+    }
+    
     /// Render day total with prefs.
     func totalEnergyString(_ prefs: EnergyPrefs) -> String {
         totalEnergy.formatted(prefs)
@@ -166,6 +192,19 @@ extension SAddFoodLogItemCommand {
             portion: portion,
             energy: energy,
             macros: macros
+        )
+    }
+}
+
+extension AddFoodLogItemCommand {
+    static func from(_ s: SAddFoodLogItemCommand) throws -> AddFoodLogItemCommand {
+        AddFoodLogItemCommand(
+            sourceId: nil,
+            name: s.name,
+            mass: s.portion .map(Mass.from),
+            energy:  s.energy .map(Energy.from),
+            macros:  s.macros .map(Macros.from),
+            consumedAt: try DietMoment.from(s.consumedAt)
         )
     }
 }
