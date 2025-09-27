@@ -60,7 +60,7 @@ struct DayLogView: View {
                         description: Text("Tap + to add your first item.")
                     )
                 } else {
-                    list(vm: vm)
+                    list(vm: vm )
                 }
             }
             .navigationTitle("Today")

@@ -11,7 +11,7 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kmp.nativecoroutines)
-    alias(libs.plugins.sqldelight)
+    alias(libs.plugins.sqldelight) apply false
     alias(libs.plugins.kover)
     alias(libs.plugins.kotest)
     alias(libs.plugins.test.logger)
