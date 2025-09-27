@@ -1,11 +1,10 @@
 import AephyrShared
-import KMPNativeCoroutinesAsync // keep for Flow -> AsyncSequence
+import KMPNativeCoroutinesAsync
 
 final class KMMFoodLogBridge: FoodLogBridge {
     private let port: FoodLogPort
     init(port: FoodLogPort) { self.port = port }
 
-    // Flow<T> -> AsyncThrowingStream<T, Error> (this part stays the same)
     func observeDay(date: DateComponents) -> AsyncThrowingStream<SFoodLogDay, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {

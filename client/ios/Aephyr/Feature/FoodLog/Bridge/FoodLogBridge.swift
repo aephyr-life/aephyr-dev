@@ -8,6 +8,7 @@
 
 import Foundation
 
+@MainActor
 protocol FoodLogBridge: Sendable {
     func observeDay(date: DateComponents) -> AsyncThrowingStream<SFoodLogDay, Error>
     func add(_ cmd: SAddFoodLogItemCommand) async throws -> SFoodLogItem
