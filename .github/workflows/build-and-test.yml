@@ -218,7 +218,7 @@ jobs:
       - name: Run KMM tests (via with-env → nix develop #shared)
         if: matrix.kind == 'gradle'
         run: |
-          ./bin/with-env shared -- just shared test
+          ./bin/with-env shared -- just shared test --no-parallel
 
       # =========================
       # sbt / Server shard

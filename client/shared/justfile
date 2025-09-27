@@ -18,8 +18,8 @@ clean:
   {{GRADLEW}} -p "{{THIS}}" clean
 
 [group('kmm')]
-test:
-  {{GRADLEW}} -p "{{THIS}}" clean assemble check
+test *args:
+  {{GRADLEW}} -p "{{THIS}}" clean assemble check {{args}}
 
 [group('kmm')]
 xc mode="debug":
